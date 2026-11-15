@@ -7,6 +7,7 @@
 - Supabase Auth: e-mail/wachtwoord met e-mailbevestiging. Lokaal gebruik blijft mogelijk zonder account.
 - Database: `encrypted_vaults`, één versleutelde momentopname per gebruiker, met eigenaars-/sessie-RLS en controle van revisie plus wijzigings-id.
 - De browser bevat uitsluitend publieke projectconfiguratie. Geen secret/service-role key nodig voor de webapp.
+- Vast adres: [Rhythm](https://rhythm-rho-bice.vercel.app/), via de productiebranch `main`. Versie 0.6.0, securityheaders en offline PWA zijn op dit adres gecontroleerd. Echte Auth-mail en iPhone-bezorging blijven afzonderlijke controles.
 
 ## Publiceren op Vercel
 
@@ -14,10 +15,12 @@ Rond vóór persoonlijk gebruik de voorwaarden in [SECURITY.md](SECURITY.md) af.
 
 1. Importeer `Snuffelplein/rhythm` in Vercel. Laat Root Directory op de repositoryroot staan; selecteer niet alleen de app-submap, omdat de gedeelde packages nodig zijn.
 
-   De huidige 0.6.0-versie met securityfixes en begeleiding staat op `feature/personal-guidance`. Gebruik deze branch voor de gecontroleerde preview; `main` bevat de wijzigingen pas na samenvoegen. Controleer de broncommit van de deployment voordat je test.
+   De huidige 0.6.0-versie met securityfixes en begeleiding is na expliciete toestemming naar `main` gebracht. Het bestaande Rhythm-project publiceert automatisch vanaf die branch. Controleer de broncommit en geleverde appversie voordat je test.
 2. De instellingen komen uit `vercel.json`. Gebruik Node.js 24 en kies één vast productieadres voor persoonlijke registraties.
 3. De bestaande project-URL en publishable key zijn als publieke defaults geconfigureerd. Om een ander Supabase-project te gebruiken stel je `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in en bouw je opnieuw. Nooit een `service_role` of secret key in een `VITE_` variabele zetten.
 4. Voeg in **Supabase → Authentication → URL Configuration** het exacte productieadres toe als **Site URL** en toegestane **Redirect URL**. Voeg ontwikkeladressen alleen afzonderlijk toe als je daar e-mailflows test. Gebruik geen algemene wildcard naar willekeurige previewdeployments.
+
+   Voor dit project is dat `https://rhythm-rho-bice.vercel.app`. De client gebruikt deze origin voor e-mailbevestiging en accountherstel. Deze admininstellingen konden niet via de beschikbare tools worden uitgelezen; controleer ze in het dashboard en test echte mails.
 5. Controleer de e-mailprovider/SMTP-configuratie, server-side wachtwoordbeleid en misbruikbeperking (rate limits/CAPTCHA-keuze). Deze admininstellingen zijn niet volledig geverifieerd. Standaard Supabase-mail is beperkt; een echte pilot vraagt gecontroleerde aflevering van bevestigings- en herstelmails. E-mailbevestiging is niet uitgezet om tests makkelijker te maken.
 6. Test op de productieorigin: account maken, ontvangen bevestiging, login, wachtwoordherstel, kluis maken/ontgrendelen, expliciete synchronisatie, tweede apparaat en offline terugkomst.
 7. Voeg juist dit vaste adres op iPhone toe via **Safari → Deel → Zet op beginscherm**, met **Open als webapp** ingeschakeld wanneer zichtbaar.
@@ -27,10 +30,10 @@ Een Git-push is geen bewijs van een Vercel-deployment. Controleer de door Vercel
 Na deployment controleer je het werkelijke previewadres met:
 
 ```powershell
-npm.cmd run test:hosted -- https://jouw-preview.vercel.app
+npm.cmd run test:hosted -- https://rhythm-rho-bice.vercel.app
 ```
 
-Deze controle gebruikt een nieuwe, tijdelijke browser met uitsluitend demo-inhoud. Hij toetst HTTPS-redirects, werkelijk geleverde securityheaders, scriptblokkade, afgeschermde bron-/privépaden, serviceworkerheaders, manifest/iconen en offline herladen. Bij ingeschakelde Vercel Deployment Protection stopt hij; dat is geen app-testuitslag en geen reden om beveiliging automatisch uit te zetten. Auth-mail en fysieke iPhone/PWA blijven afzonderlijke controles. Het resultaat staat lokaal in `test-results/hosted-preview.json`.
+Deze controle gebruikt een nieuwe, tijdelijke browser met uitsluitend demo-inhoud. Hij toetst HTTPS-redirects, werkelijk geleverde securityheaders, de verwachte appversie, zichtbare begeleiding, scriptblokkade, afgeschermde bron-/privépaden, serviceworkerheaders, manifest/iconen en offline herladen. Bij ingeschakelde Vercel Deployment Protection stopt hij; dat is geen app-testuitslag en geen reden om beveiliging automatisch uit te zetten. Auth-mail en fysieke iPhone/PWA blijven afzonderlijke controles. Het resultaat staat lokaal in `test-results/hosted-preview.json`.
 
 ## Databasemigraties
 

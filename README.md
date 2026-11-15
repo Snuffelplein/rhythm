@@ -80,7 +80,7 @@ Browsercontroles gebruiken Microsoft Edge via Playwright. Voor de echte modelket
 
 ## Beveiliging
 
-Versie 0.6.0 voegt een persoonlijk dagplan, uitlegbare patroonfeedback en terugkoppeling bij moeilijke momenten toe. Routineherinneringen zijn expliciete opt-in; de Supabase-backend is geactiveerd en technisch gecontroleerd. Echte bezorging op iPhone en de frontendhosting blijven te valideren. Zie [REMINDERS.md](REMINDERS.md) voor werking, privacy en verificatie.
+De webapp staat op [rhythm-rho-bice.vercel.app](https://rhythm-rho-bice.vercel.app/). Versie 0.6.0 voegt een persoonlijk dagplan, uitlegbare patroonfeedback en terugkoppeling bij moeilijke momenten toe. De werkelijke hostingheaders en offline PWA zijn gecontroleerd. Routineherinneringen zijn expliciete opt-in; de Supabase-backend is geactiveerd en technisch gecontroleerd. Echte Auth-mail en bezorging op iPhone blijven te valideren. Zie [REMINDERS.md](REMINDERS.md) voor werking, privacy en verificatie.
 
 Lees [SECURITY.md](SECURITY.md) voor auditcommando's, sessiecontrole, automatische vergrendeling, PKCE en de controles die nog op het echte productieadres moeten plaatsvinden. Een geslaagde scan geeft geen garantie van 100% veiligheid.
 

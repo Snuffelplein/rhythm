@@ -9,6 +9,7 @@ const local = ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname);
 assert.ok(target.protocol === 'https:' || (local && target.protocol === 'http:'), 'Hosted checks require HTTPS');
 const origin = target.origin;
 const hosting = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+const packageInfo = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const expected = hosting.headers.find(rule => rule.source === '/(.*)').headers;
 const evidence = { origin, checkedAt: new Date().toISOString(), local, status: 'running', checks: [] };
 let browser;
@@ -51,6 +52,12 @@ try {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(origin);
   await page.getByRole('heading', { name: 'Jouw ritme begint hier.' }).waitFor();
+  const nav = page.getByRole('navigation', { name: 'Mobiele navigatie' });
+  await nav.getByRole('button', { name: 'Meer', exact: true }).click();
+  assert.ok((await page.locator('.version-note').innerText()).startsWith(`Rhythm ${packageInfo.version} ·`), 'Hosted app must match the checked-out release version');
+  await nav.getByRole('button', { name: 'Vandaag', exact: true }).click();
+  evidence.version = packageInfo.version;
+  evidence.checks.push('expected-app-version');
   assert.equal(await page.evaluate(() => isSecureContext), true);
   await page.evaluate(() => { const script = document.createElement('script'); script.textContent = 'window.rhythmInlineTest=true'; document.body.append(script); });
   assert.equal(await page.evaluate(() => window.rhythmInlineTest), undefined, 'Actual CSP must block inline JavaScript');
@@ -77,6 +84,7 @@ try {
   await page.getByRole('heading', { name: 'Jouw ritme begint hier.' }).waitFor();
   await page.getByRole('button', { name: 'Bekijk de demo', exact: true }).click();
   await page.getByText('Je bekijkt voorbeeldgegevens.', { exact: false }).waitFor();
+  await page.getByRole('region', { name: 'Persoonlijke begeleiding' }).getByRole('heading', { name: 'Een haalbaar plan voor jou' }).waitFor();
   assert.deepEqual(errors, []);
   evidence.checks.push('standalone-manifest-icons-and-offline-demo');
   evidence.status = 'passed';

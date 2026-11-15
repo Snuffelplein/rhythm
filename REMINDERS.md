@@ -10,7 +10,7 @@ Existing schema-one vaults without `guidance` remain readable. Guidance is an op
 
 ## Push activation status
 
-**The push backend is active on the configured Supabase project.** The user explicitly approved the database, Vault, Edge Function and minute scheduler rollout. Hosted owner/session isolation, generic HTTP denial tests and the scheduler-to-function path have passed. There are no registered devices yet; physical iPhone delivery is not verified. The corresponding 0.6.0 frontend still needs its controlled HTTPS deployment and existing release checks.
+**The push backend is active on the configured Supabase project.** The user explicitly approved the database, Vault, Edge Function and minute scheduler rollout. Hosted owner/session isolation, generic HTTP denial tests and the scheduler-to-function path have passed. The 0.6.0 frontend is now on [the fixed production address](https://rhythm-rho-bice.vercel.app/); actual headers, version, guidance and offline PWA have been checked. Auth admin/email configuration and physical iPhone delivery remain separate release checks.
 
 Applied migrations are `20261115221529_personal_guidance_push`, `20261115221738_push_policy_hardening` and `20261115222412_single_use_push_cron_tickets`. Filenames match the actual hosted history. Do not replay these migrations on the configured project.
 
