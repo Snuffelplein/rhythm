@@ -12,5 +12,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo Rhythm starten op http://127.0.0.1:5173
-call npm.cmd run preview -- --port 5173 --strictPort --open /?v=0.5.0
+call npm.cmd run preview -- --port 5173 --strictPort --open /?v=0.6.0
 pause

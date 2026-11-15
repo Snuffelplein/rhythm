@@ -17,12 +17,20 @@ function entities(value: unknown, validate: (item: unknown) => Record<string, un
   for (const item of list(value)) { const v = validate(item); text(v.id); if (ids.has(v.id)) invalid(); ids.add(v.id); }
 }
 export function assertData(value: unknown): asserts value is RhythmData {
-  const data = record(value, ['schemaVersion', 'sessions', 'intent', 'wakeMarkers', 'checkins', 'journal', 'audit', 'settings']);
+  const data = record(value, ['schemaVersion', 'sessions', 'intent', 'wakeMarkers', 'checkins', 'journal', 'audit', 'settings', 'guidance']);
   if (data.schemaVersion !== 1) invalid();
   const settings = record(data.settings, ['timezone', 'goalBed', 'goalWake', 'theme']);
   zone(settings.timezone);
   for (const goal of [settings.goalBed, settings.goalWake]) if (typeof goal !== 'string' || (goal !== '' && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(goal))) invalid();
   oneOf(settings.theme, ['dark','light']);
+  if (data.guidance !== undefined) {
+    const g = record(data.guidance, ['windDownMinutes','checkinTime','commitments','feedback']);
+    oneOf(String(g.windDownMinutes), ['15','30','60']); number(g.windDownMinutes,15,60);
+    if (typeof g.checkinTime !== 'string' || (g.checkinTime !== '' && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(g.checkinTime))) invalid();
+    if (list(g.commitments).length > 8) invalid();
+    entities(g.commitments, item => { const v=record(item,['id','label','time']); text(v.label,80); if (typeof v.time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(v.time)) invalid(); return v; });
+    entities(g.feedback, item => { const v=record(item,['id','atUtc','eventId','outcome','reason']); time(v.atUtc); text(v.eventId,200); oneOf(v.outcome,['done','hard','skip']); if(v.reason!==undefined) oneOf(v.reason,['not_sleepy','very_tired','busy','other']); return v; });
+  }
   if (data.intent !== null) { const v = record(data.intent, ['id', 'startedAtUtc', 'originalTimezone']); text(v.id); time(v.startedAtUtc); zone(v.originalTimezone); }
   entities(data.sessions, item => {
     const v = interval(item, ['id','startUtc','endUtc','originalTimezone','source','kind','inBedAtUtc','reviewStatus','interruptions','estimatedAwakeMinutes','createdAtUtc','updatedAtUtc']);

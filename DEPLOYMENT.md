@@ -34,7 +34,7 @@ Deze controle gebruikt een nieuwe, tijdelijke browser met uitsluitend demo-inhou
 
 ## Databasemigraties
 
-De SQL onder `supabase/migrations/` beschrijft de geïmplementeerde schemawijzigingen. Op het opgegeven Rhythm-project zijn de migraties al toegepast; voer ze niet opnieuw handmatig uit. Bij een nieuw project volg je de migratiegeschiedenis met de vastgezette Supabase CLI.
+De SQL onder `supabase/migrations/` beschrijft de schemawijzigingen. De oorspronkelijke kluis-/securitymigraties zijn al op het opgegeven project toegepast; voer die niet opnieuw handmatig uit. De nieuwe `personal_guidance_push`-migratie is voorbereid maar nog niet toegepast: productieactivering wacht op expliciete goedkeuring na automatische afwijzing van die stap. Zie [REMINDERS.md](REMINDERS.md). Bij een nieuw project volg je de migratiegeschiedenis met de vastgezette Supabase CLI.
 
 De beveiliging bestaat uit expliciete tabelrechten, vier RLS-policies op `auth.uid() = user_id`, uitsluiten van anonieme accounts en controle van de revisie en versleutelde envelop. Er is geen publieke geprivilegieerde app-RPC. Een afgeschermde functie in `rhythm_private` controleert uitsluitend of de eigen Auth-sessie nog bestaat en niet verlopen is; deze heeft daarvoor een vast leeg search_path en beperkte EXECUTE-rechten. De administratieve bootstrap-eventtrigger heeft geen publieke uitvoerrechten.
 

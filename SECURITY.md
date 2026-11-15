@@ -29,6 +29,8 @@ Vercel draait de dependency-gate vóór de build en stopt bij bekende advisories
 
 ## Voor persoonlijk gebruik op een gehost adres
 
+De optionele pushbackend van 0.6.0 staat apart beschreven in [REMINDERS.md](REMINDERS.md) en is nog niet geactiveerd. Nieuwe lokale SQL-/runtimeproeven vervangen de hosted RLS-/bezorgcontrole niet. De laatste hercontrole van het bestaande Supabase-project meldde dat leaked-password protection uit staat; beoordeel die instelling vóór persoonlijk cloudgebruik. De provider biedt deze functie op Pro en hoger; er wordt geen betaald plan automatisch aangezet.
+
 Verifieer eerst de daadwerkelijk geleverde HTTPS-/securityheaders, exacte Auth-redirects, echte e-mailbevestiging en wachtwoordherstel, server-side wachtwoord-/misbruikinstellingen en de iPhone-beginschermcontext. Een lokale headlesstest bewijst dat niet. Zie [DEPLOYMENT.md](DEPLOYMENT.md). Test een eerste preview met synthetische gegevens.
 
 De volledige lokale `docs/`-vault, sleutels, certificaten, `.env`-bestanden en testprofielen worden niet gepubliceerd. Verstuur bij een bugmelding geen wachtwoorden, tokens, opnamen of gezondheidslogs. Meld gevoelige problemen via een privé-kanaal van de repositorybeheerder, niet in een openbare issue.

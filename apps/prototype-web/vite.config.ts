@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
 const CACHE='rhythm-static-${Date.now()}';
 const ASSETS=${JSON.stringify(assets)};
 const PRECACHE=${JSON.stringify(precache)};
+${readFileSync(new URL('./src/guidance/push-worker.js', import.meta.url), 'utf8')}
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PRECACHE)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('rhythm-static-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==self.location.origin||!ASSETS.includes(url.pathname))return;event.respondWith(caches.open(CACHE).then(async cache=>{if(event.request.mode==='navigate'){try{const fresh=await fetch(event.request);if(fresh.ok){await cache.put('/index.html',fresh.clone());return fresh;}}catch{}return (await cache.match('/index.html'))||Response.error();}const cached=await cache.match(event.request,{ignoreVary:true});if(cached)return cached;const response=await fetch(event.request);if(response.ok)await cache.put(event.request,response.clone());return response;}));});

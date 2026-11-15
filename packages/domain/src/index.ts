@@ -51,6 +51,19 @@ export interface Settings {
     goalWake: string;
     theme: 'dark' | 'light';
 }
+export interface GuidanceFeedback {
+    id: string;
+    atUtc: string;
+    eventId: string;
+    outcome: 'done' | 'hard' | 'skip';
+    reason?: 'not_sleepy' | 'very_tired' | 'busy' | 'other';
+}
+export interface GuidancePreferences {
+    windDownMinutes: number;
+    checkinTime: string;
+    commitments: { id: string; label: string; time: string }[];
+    feedback: GuidanceFeedback[];
+}
 export interface RhythmData {
     schemaVersion: 1;
     sessions: SleepSession[];
@@ -60,6 +73,7 @@ export interface RhythmData {
     journal: JournalEntry[];
     audit: AuditEvent[];
     settings: Settings;
+    guidance?: GuidancePreferences;
 }
 export interface Clock {
     now(): string;
