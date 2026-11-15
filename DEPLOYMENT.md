@@ -13,6 +13,8 @@
 Rond vóór persoonlijk gebruik de voorwaarden in [SECURITY.md](SECURITY.md) af. Gebruik de eerste gecontroleerde preview uitsluitend met synthetische gegevens; de lokale testresultaten bewijzen de uiteindelijke hosting- en Auth-configuratie niet.
 
 1. Importeer `Snuffelplein/rhythm` in Vercel. Laat Root Directory op de repositoryroot staan; selecteer niet alleen de app-submap, omdat de gedeelde packages nodig zijn.
+
+   De securityfixes staan momenteel op `security/pre-deploy-audit`. Gebruik deze branch voor de eerste gecontroleerde preview; `main` bevat de fixes pas na samenvoegen. Controleer de broncommit van de deployment voordat je test.
 2. De instellingen komen uit `vercel.json`. Gebruik Node.js 24 en kies één vast productieadres voor persoonlijke registraties.
 3. De bestaande project-URL en publishable key zijn als publieke defaults geconfigureerd. Om een ander Supabase-project te gebruiken stel je `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in en bouw je opnieuw. Nooit een `service_role` of secret key in een `VITE_` variabele zetten.
 4. Voeg in **Supabase → Authentication → URL Configuration** het exacte productieadres toe als **Site URL** en toegestane **Redirect URL**. Voeg ontwikkeladressen alleen afzonderlijk toe als je daar e-mailflows test. Gebruik geen algemene wildcard naar willekeurige previewdeployments.
@@ -21,6 +23,14 @@ Rond vóór persoonlijk gebruik de voorwaarden in [SECURITY.md](SECURITY.md) af.
 7. Voeg juist dit vaste adres op iPhone toe via **Safari → Deel → Zet op beginscherm**, met **Open als webapp** ingeschakeld wanneer zichtbaar.
 
 Een Git-push is geen bewijs van een Vercel-deployment. Controleer de door Vercel teruggegeven productie-URL en bouwstatus. Preview- en productieadressen hebben aparte browseropslag; ga niet uit van automatische overdracht van lokale logs.
+
+Na deployment controleer je het werkelijke previewadres met:
+
+```powershell
+npm.cmd run test:hosted -- https://jouw-preview.vercel.app
+```
+
+Deze controle gebruikt een nieuwe, tijdelijke browser met uitsluitend demo-inhoud. Hij toetst HTTPS-redirects, werkelijk geleverde securityheaders, scriptblokkade, afgeschermde bron-/privépaden, serviceworkerheaders, manifest/iconen en offline herladen. Bij ingeschakelde Vercel Deployment Protection stopt hij; dat is geen app-testuitslag en geen reden om beveiliging automatisch uit te zetten. Auth-mail en fysieke iPhone/PWA blijven afzonderlijke controles. Het resultaat staat lokaal in `test-results/hosted-preview.json`.
 
 ## Databasemigraties
 
