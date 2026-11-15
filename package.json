@@ -30,6 +30,7 @@
     "test:guidance": "node tests/guidance-browser.mjs",
     "test:push": "node tests/push-database.mjs && node tests/push-protocol.mjs",
     "test:push:browser": "node tests/push-browser.mjs",
+    "test:push:hosted": "node tests/push-hosted.mjs",
     "security:deps": "npm audit --audit-level=low"
   },
   "dependencies": {

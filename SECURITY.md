@@ -29,7 +29,7 @@ Vercel draait de dependency-gate vóór de build en stopt bij bekende advisories
 
 ## Voor persoonlijk gebruik op een gehost adres
 
-De optionele pushbackend van 0.6.0 staat apart beschreven in [REMINDERS.md](REMINDERS.md) en is nog niet geactiveerd. Nieuwe lokale SQL-/runtimeproeven vervangen de hosted RLS-/bezorgcontrole niet. De laatste hercontrole van het bestaande Supabase-project meldde dat leaked-password protection uit staat; beoordeel die instelling vóór persoonlijk cloudgebruik. De provider biedt deze functie op Pro en hoger; er wordt geen betaald plan automatisch aangezet.
+De optionele pushbackend van 0.6.0 is geactiveerd en staat beschreven in [REMINDERS.md](REMINDERS.md). Hosted RLS/sessies, negatieve HTTP-toegang en eenmalige scheduler-tickets zijn getest; fysieke bezorging blijft te controleren. Door de platformrechten van pg_net worden geen blijvende secrets in die wachtrij gezet. De laatste hercontrole van het bestaande Supabase-project meldde dat leaked-password protection uit staat; beoordeel die instelling vóór persoonlijk cloudgebruik. De provider biedt deze functie op Pro en hoger; er wordt geen betaald plan automatisch aangezet.
 
 Verifieer eerst de daadwerkelijk geleverde HTTPS-/securityheaders, exacte Auth-redirects, echte e-mailbevestiging en wachtwoordherstel, server-side wachtwoord-/misbruikinstellingen en de iPhone-beginschermcontext. Een lokale headlesstest bewijst dat niet. Zie [DEPLOYMENT.md](DEPLOYMENT.md). Test een eerste preview met synthetische gegevens.
 

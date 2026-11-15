@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 import * as webpush from 'npm:web-push@4.0.0';
-import { isPushEndpoint, notificationFor, sameSecret } from './protocol.mjs';
+import { isPushEndpoint, notificationFor } from './protocol.mjs';
 
 const url=Deno.env.get('SUPABASE_URL')!;
 const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -29,8 +29,11 @@ Deno.serve({port:Number(Deno.env.get('PORT')??8000),hostname:Deno.env.get('RHYTH
     }
     if(request.method!=='POST')return reply({error:'Method not allowed'},405);
     if(request.headers.has('x-rhythm-cron')) {
+      const ticket=request.headers.get('x-rhythm-cron')??'';
+      if(!/^[a-f0-9]{64}$/.test(ticket))return reply({error:'Unauthorized'},401);
+      const {data:accepted,error}=await admin.rpc('rhythm_push_consume_cron',{p_token:ticket});
+      if(error||accepted!==true)return reply({error:'Unauthorized'},401);
       const config=await configuration();
-      if(!sameSecret(request.headers.get('x-rhythm-cron'),config.cronToken))return reply({error:'Unauthorized'},401);
       const jobs=await dispatch('claim');
       await Promise.all(jobs.map(async(job:any)=>{
         if(!await dispatch('authorize',{id:job.id,lease:job.lease}))return;

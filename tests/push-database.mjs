@@ -18,13 +18,17 @@ try {
     revoke all on function rhythm_private.has_active_session() from public; grant execute on function rhythm_private.has_active_session() to authenticated;
     create table vault.decrypted_secrets(id uuid primary key,decrypted_secret text,name text);
     create function vault.create_secret(value text,p_name text) returns uuid language plpgsql as $$ declare k uuid=gen_random_uuid(); begin insert into vault.decrypted_secrets values(k,value,p_name);return k;end $$;
+    create function vault.update_secret(secret_id uuid,new_secret text default null,new_name text default null,new_description text default null,new_key_id uuid default null) returns void language sql as $$ update vault.decrypted_secrets set decrypted_secret=coalesce(new_secret,decrypted_secret) where id=secret_id $$;
     create function extensions.gen_random_bytes(n integer) returns bytea language sql as $$ select decode(repeat('ab',n),'hex') $$;
+    create function extensions.digest(value text,algorithm text) returns bytea language sql as $$ select pg_catalog.sha256(convert_to(value,'UTF8')) $$;
     create table cron.job(name text,schedule text,command text);
     create function cron.schedule(n text,s text,c text) returns integer language plpgsql as $$ begin insert into cron.job values(n,s,c);return 1;end $$;
     create function net.http_post(url text,headers jsonb,body jsonb,timeout_milliseconds integer) returns bigint language sql as $$ select 1::bigint $$;
   `);
-  const sql=(await readFile('supabase/migrations/20261115213713_personal_guidance_push.sql','utf8')).replace(/^create extension[^;]+;/gm,'');
+  const sql=(await readFile('supabase/migrations/20261115221529_personal_guidance_push.sql','utf8')).replace(/^create extension[^;]+;/gm,'');
   await db.exec(sql);
+  await db.exec(await readFile('supabase/migrations/20261115221738_push_policy_hardening.sql','utf8'));
+  await db.exec(await readFile('supabase/migrations/20261115222412_single_use_push_cron_tickets.sql','utf8'));
   assert.equal(new Date((await db.query(`select rhythm_private.next_push_at('03:00','Europe/Amsterdam','2026-03-28T23:00:00Z',30) t`)).rows[0].t).toISOString(),'2026-03-29T00:30:00.000Z');
   assert.equal(new Date((await db.query(`select rhythm_private.next_push_at('02:30','Europe/Amsterdam','2026-10-24T22:00:00Z',0) t`)).rows[0].t).toISOString(),'2026-10-25T01:30:00.000Z');
   const a=crypto.randomUUID(),b=crypto.randomUUID(),sa=crypto.randomUUID(),sb=crypto.randomUUID();
@@ -58,5 +62,12 @@ try {
   await db.query(`delete from auth.sessions where id=$1`,[sa]);await role(a,sa);assert.equal((await db.query('select * from public.push_devices')).rows.length,0,'Revoked token must not access devices');
   await db.exec('reset role');await db.query(`update rhythm_private.push_jobs set due_at=now()-interval '1 minute',next_attempt_at=now()-interval '1 minute'`);await db.query(`select set_config('request.jwt.claims','{"role":"service_role"}',false)`);await db.exec('set role service_role');assert.equal((await call('claim')).length,0,'Revoked session must not dispatch');
   await db.exec('reset role; set role anon');await assert.rejects(db.query('select * from public.push_devices'),/permission denied/);
-  console.log('Local Postgres passed: migration, owner RLS, restricted columns/private config, endpoint allowlist, queue lease, stale skip and session revocation. Supabase Vault/cron/net are local stubs; hosted deployment is untested.');
+  await assert.rejects(db.query("select public.rhythm_push_consume_cron(repeat('a',64))"),/permission denied/);
+  await db.exec('reset role');
+  await db.query("insert into rhythm_private.push_cron_tickets values(encode(extensions.digest(repeat('a',64),'sha256'),'hex'),now()+interval '90 seconds'),(encode(extensions.digest(repeat('b',64),'sha256'),'hex'),now()-interval '1 second')");
+  await db.query(`select set_config('request.jwt.claims','{"role":"service_role"}',false)`);await db.exec('set role service_role');
+  assert.equal((await db.query("select public.rhythm_push_consume_cron(repeat('a',64)) ok")).rows[0].ok,true);
+  assert.equal((await db.query("select public.rhythm_push_consume_cron(repeat('a',64)) ok")).rows[0].ok,false,'No ticket replay');
+  assert.equal((await db.query("select public.rhythm_push_consume_cron(repeat('b',64)) ok")).rows[0].ok,false,'No expired tickets');
+  console.log('Local Postgres passed: all push migrations, owner RLS, private config, endpoint allowlist, queue lease, stale skip, session revocation and single-use/expired cron tickets. Supabase Vault/cron/net remain local stubs; hosted behavior has separate tests.');
 } finally {await db.close();}
