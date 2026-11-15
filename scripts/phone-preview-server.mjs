@@ -1,17 +1,19 @@
 import { createServer } from 'node:http';
-import { createReadStream } from 'node:fs';
+import { createReadStream, readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import QRCode from 'qrcode';
 
 const types = { '.html': 'text/html; charset=utf-8', '.webmanifest': 'application/manifest+json', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
 const escape = text => text.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const securityHeaders = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).headers.find(item => item.source === '/(.*)').headers;
 
 export function createPhonePreviewServer(directory, getLink) {
   const root = path.resolve(directory);
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
+    for (const { key, value } of securityHeaders) response.setHeader(key, value);
     if (!['GET', 'HEAD'].includes(request.method ?? '')) { response.writeHead(405, { Allow: 'GET, HEAD' }); response.end(); return; }
     try {
       const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
@@ -19,6 +21,7 @@ export function createPhonePreviewServer(directory, getLink) {
         response.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); response.end(JSON.stringify({ url: getLink() })); return;
       }
       if (pathname === '/__phone') {
+        // This local helper contains its own static style; it never contains diary data.
         const link = getLink();
         const qr = link ? await QRCode.toDataURL(link, { width: 320, margin: 2, errorCorrectionLevel: 'M' }) : null;
         response.writeHead(200, { 'Content-Type': types['.html'], 'Cache-Control': 'no-store' });

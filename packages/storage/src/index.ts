@@ -2,7 +2,7 @@ import { assertData, type RhythmData, type SleepRepository, type SleepSession } 
 import { ms, validateSession } from '../../rhythm-engine/src/index';
 export const VAULT_KEY = 'rhythm.vault.v1';
 export interface Envelope {
-    version: 1;
+    version: 1 | 2;
     salt: string;
     iv: string;
     ciphertext: string;
@@ -10,14 +10,21 @@ export interface Envelope {
 export function assertEnvelope(value: unknown): asserts value is Envelope {
     if (!value || typeof value !== 'object') throw new Error('Ongeldige versleutelde kluis.');
     const e = value as Partial<Envelope>;
-    if (e.version !== 1 || typeof e.salt !== 'string' || typeof e.iv !== 'string' || typeof e.ciphertext !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(e.salt) || !/^[A-Za-z0-9+/]+={0,2}$/.test(e.iv) || !/^[A-Za-z0-9+/]+={0,2}$/.test(e.ciphertext)) throw new Error('Ongeldige versleutelde kluis.');
+    if ((e.version !== 1 && e.version !== 2) || Object.keys(e).sort().join(',') !== 'ciphertext,iv,salt,version' || typeof e.salt !== 'string' || e.salt.length !== 24 || typeof e.iv !== 'string' || e.iv.length !== 16 || typeof e.ciphertext !== 'string' || e.ciphertext.length > 8000000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(e.salt) || !/^[A-Za-z0-9+/]+={0,2}$/.test(e.iv) || !/^[A-Za-z0-9+/]+={0,2}$/.test(e.ciphertext)) throw new Error('Ongeldige versleutelde kluis.');
     if (atob(e.salt).length !== 16 || atob(e.iv).length !== 12 || atob(e.ciphertext).length < 16) throw new Error('Ongeldige versleutelde kluis.');
 }
 const encode = (bytes: Uint8Array) => btoa(Array.from(bytes, b => String.fromCharCode(b)).join(''));
 const decode = (text: string) => Uint8Array.from(atob(text), c => c.charCodeAt(0));
-async function derive(password: string, salt: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
+async function derive(password: string, salt: Uint8Array<ArrayBuffer>, version: 1 | 2 = 2): Promise<CryptoKey> {
+    if (password.length > 1024) throw new Error('Het kluiswachtwoord is te lang.');
     const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: version === 1 ? 310000 : 600000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+const algorithm = (iv: Uint8Array<ArrayBuffer>, version: 1 | 2 = 2): AesGcmParams => ({ name: 'AES-GCM', iv, ...(version === 2 ? { additionalData: new TextEncoder().encode('rhythm.vault.v2') } : {}) });
+async function seal(data: RhythmData, key: CryptoKey, salt: Uint8Array<ArrayBuffer>): Promise<Envelope> {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(algorithm(iv), key, new TextEncoder().encode(JSON.stringify(data)));
+    return { version: 2, salt: encode(salt), iv: encode(iv), ciphertext: encode(new Uint8Array(ciphertext)) };
 }
 export class BrowserVault implements SleepRepository {
     private key: CryptoKey | null = null;
@@ -30,8 +37,8 @@ export class BrowserVault implements SleepRepository {
     async unlock(password: string): Promise<RhythmData | null> {
         const raw = this.storage.getItem(VAULT_KEY);
         if (!raw) {
-            if (password.length < 8)
-                throw new Error('Kies een wachtwoord met minstens 8 tekens.');
+            if (password.length < 12)
+                throw new Error('Kies een kluiswachtwoord met minstens 12 tekens.');
             this.salt = crypto.getRandomValues(new Uint8Array(16));
             this.key = await derive(password, this.salt);
             return null;
@@ -39,15 +46,22 @@ export class BrowserVault implements SleepRepository {
         try {
             const envelope: unknown = JSON.parse(raw);
             assertEnvelope(envelope);
-            const salt = decode(envelope.salt), key = await derive(password, salt);
-            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(envelope.iv) }, key, decode(envelope.ciphertext));
+            let salt = decode(envelope.salt), key = await derive(password, salt, envelope.version);
+            const decrypted = await crypto.subtle.decrypt(algorithm(decode(envelope.iv), envelope.version), key, decode(envelope.ciphertext));
             const value: unknown = JSON.parse(new TextDecoder().decode(decrypted));
             assertData(value);
+            let currentRaw = raw;
+            if (envelope.version === 1) {
+                salt = crypto.getRandomValues(new Uint8Array(16)); key = await derive(password, salt);
+                currentRaw = JSON.stringify(await seal(value, key, salt));
+                if (this.storage.getItem(VAULT_KEY) !== raw) throw new Error('changed');
+                this.storage.setItem(VAULT_KEY, currentRaw);
+            }
             this.key = key;
             this.salt = salt;
-            this.current = value;
-            this.currentRaw = raw;
-            return value;
+            this.current = structuredClone(value);
+            this.currentRaw = currentRaw;
+            return structuredClone(value);
         }
         catch {
             this.lock();
@@ -60,15 +74,14 @@ export class BrowserVault implements SleepRepository {
         if (!this.key || !this.salt)
             throw new Error('Je kluis is vergrendeld.');
         const expected = this.currentRaw, key = this.key;
+        const snapshot = structuredClone(data); assertData(snapshot);
         if (this.storage.getItem(VAULT_KEY) !== expected) throw new Error('Je dagboek is in een ander venster gewijzigd. Vergrendel en open het opnieuw vóór opslaan.');
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, this.key, new TextEncoder().encode(JSON.stringify(data)));
-        const envelope: Envelope = { version: 1, salt: encode(this.salt), iv: encode(iv), ciphertext: encode(new Uint8Array(ciphertext)) };
+        const envelope = await seal(snapshot, key, this.salt);
         try {
             if (this.storage.getItem(VAULT_KEY) !== expected) throw new Error('Je dagboek is in een ander venster gewijzigd.');
             const raw = JSON.stringify(envelope);
             this.storage.setItem(VAULT_KEY, raw);
-            if (this.key === key) { this.current = structuredClone(data); this.currentRaw = raw; }
+            if (this.key === key) { this.current = snapshot; this.currentRaw = raw; }
         }
         catch {
             throw new Error('Opslaan is niet gelukt. Mogelijk is de browseropslag vol of niet beschikbaar. Houd dit scherm open en exporteer je gegevens.');
@@ -80,17 +93,15 @@ export class BrowserVault implements SleepRepository {
         if (!this.key || !this.salt || !this.current) throw new Error('Ontgrendel eerst je dagboek.');
         if (this.storage.getItem(VAULT_KEY) !== this.currentRaw) throw new Error('Je dagboek is in een ander venster gewijzigd. Vergrendel en open het opnieuw vóór synchroniseren.');
         const data: RhythmData = { ...this.current, journal: this.current.journal.map(({ audio: _audio, ...entry }) => entry) };
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, this.key, new TextEncoder().encode(JSON.stringify(data)));
-        return { version: 1, salt: encode(this.salt), iv: encode(iv), ciphertext: encode(new Uint8Array(ciphertext)) };
+        return seal(data, this.key, this.salt);
     }
-    async restoreCloud(envelope: unknown, password: string, canCommit: () => boolean = () => true): Promise<RhythmData> {
+    async restoreCloud(envelope: unknown, password: string, canCommit: () => boolean = () => true, beforeCommit?: (raw: string) => Promise<void>): Promise<RhythmData> {
         const originalRaw = this.storage.getItem(VAULT_KEY);
         assertEnvelope(envelope);
-        const salt = decode(envelope.salt), key = await derive(password, salt);
+        let salt = decode(envelope.salt), key = await derive(password, salt, envelope.version);
         let data: RhythmData;
         try {
-            const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(envelope.iv) }, key, decode(envelope.ciphertext));
+            const raw = await crypto.subtle.decrypt(algorithm(decode(envelope.iv), envelope.version), key, decode(envelope.ciphertext));
             const value: unknown = JSON.parse(new TextDecoder().decode(raw));
             assertData(value); data = value;
         } catch { throw new Error('De cloudkopie kon niet worden ontgrendeld. Controleer je kluiswachtwoord; je lokale dagboek is niet gewijzigd.'); }
@@ -100,12 +111,14 @@ export class BrowserVault implements SleepRepository {
             const audio = previous?.journal.find(note => note.id === entry.id && note.text === entry.text)?.audio;
             return audio ? { ...entry, audio } : entry;
         }) };
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(data)));
+        if (envelope.version === 1) { salt = crypto.getRandomValues(new Uint8Array(16)); key = await derive(password, salt); }
+        const encrypted = await seal(data, key, salt);
         // Commit only after decrypt/validation/encryption succeeded. Quota failure keeps the old vault/key.
         if (this.storage.getItem(VAULT_KEY) !== originalRaw) throw new Error('Je lokale dagboek is ondertussen gewijzigd. Haal de cloudkopie opnieuw op.');
         if (!canCommit()) throw new Error('Ophalen is gestopt. Je lokale kluis is niet gewijzigd.');
-        const stored = JSON.stringify({ version: 1, salt: envelope.salt, iv: encode(iv), ciphertext: encode(new Uint8Array(encrypted)) });
+        const stored = JSON.stringify(encrypted);
+        await beforeCommit?.(stored);
+        if (this.storage.getItem(VAULT_KEY) !== originalRaw || !canCommit()) throw new Error('Ophalen is gestopt. Je lokale kluis is niet gewijzigd.');
         this.storage.setItem(VAULT_KEY, stored);
         this.key = key; this.salt = salt; this.current = structuredClone(data);
         this.currentRaw = stored;

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Cloud, LockKeyhole } from 'lucide-react';
 import type { CloudController } from './use-cloud';
 
@@ -6,6 +6,7 @@ export function CloudPanel({ cloud, onUnlock }: { cloud: CloudController; onUnlo
   const [tab, setTab] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [vaultPassword, setVaultPassword] = useState('');
   const [consent, setConsent] = useState(false), [replace, setReplace] = useState(false);
+  useEffect(() => { setPassword(''); setVaultPassword(''); setConsent(false); setReplace(false); }, [cloud.session?.user.id]);
   const disabled = cloud.busy || cloud.saving;
   async function auth(event: FormEvent) { event.preventDefault(); await cloud.authenticate(tab, email.trim(), password); setPassword(''); }
   async function restore(event: FormEvent) { event.preventDefault(); await cloud.restore(vaultPassword); setVaultPassword(''); }

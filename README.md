@@ -78,6 +78,10 @@ npm.cmd run test:visual
 
 Browsercontroles gebruiken Microsoft Edge via Playwright. Voor de echte modelketen is afzonderlijk `npm.cmd run test:ai` beschikbaar; dit downloadt grote modelgewichten na de testkeuze. Resultaten en testprofielen staan alleen in de genegeerde map `test-results/`.
 
+## Beveiliging
+
+Lees [SECURITY.md](SECURITY.md) voor auditcommando's, sessiecontrole, automatische vergrendeling, PKCE en de controles die nog op het echte productieadres moeten plaatsvinden. Een geslaagde scan geeft geen garantie van 100% veiligheid.
+
 ## Grenzen en documentatie
 
 Native iPhone-alarmen, HealthKit/Watch, automatisch samenvoegen van conflicten, algemene bestandsimport en accountverwijdering vanuit de app zijn nog niet beschikbaar. De bestaande handvatten zijn beschrijvend en geen behandeling of diagnose. De backend regelt geen continue monitoring door een professional.

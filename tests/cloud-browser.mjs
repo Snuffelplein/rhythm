@@ -41,6 +41,7 @@ async function context() {
       const prior = rows.get(id);
       if (req.method() === 'POST' && prior) return respond({ code: '23505', message: 'conflict' }, 409);
       if (req.method() === 'PATCH' && Number(url.searchParams.get('revision')?.replace('eq.', '')) !== prior?.revision) return respond(represent(null));
+      if (req.method() === 'PATCH' && url.searchParams.get('change_id') !== `eq.${prior?.change_id}`) return respond(represent(null));
       const row = { ...body, updated_at: new Date().toISOString() }; rows.set(id, row);
       return respond(represent(row), req.method() === 'POST' ? 201 : 200);
     }
@@ -117,15 +118,15 @@ try {
   catch (error) { console.log(await second.locator('.cloud-panel').innerText()); throw error; }
   await second.getByRole('navigation', { name: 'Mobiele navigatie' }).getByRole('button', { name: 'Dagboek', exact: true }).click();
   await second.getByText(note, { exact: true }).waitFor();
-  const resetContext = await context(), resetPage = await resetContext.newPage();
+  const resetPage = page;
   resetPage.setDefaultTimeout(12000);
-  await resetPage.goto(base + '/#access_token=' + token(userA) + '&refresh_token=test-refresh-a&type=recovery&expires_in=3600&token_type=bearer');
+  await resetPage.goto(base + '/?code=fixture-recovery-code');
   await resetPage.getByLabel('Nieuw accountwachtwoord', { exact: true }).fill('replacement-account-password');
   await resetPage.getByRole('button', { name: 'Bewaar mijn accountwachtwoord', exact: true }).click();
   await resetPage.getByRole('status').filter({ hasText: 'accountwachtwoord is gewijzigd' }).waitFor();
   assert.ok(requests.some(r => r.method === 'PUT' && r.path.endsWith('/user') && r.body.password === 'replacement-account-password'));
   assert.ok(!JSON.stringify(requests).includes(localPassword));
   assert.deepEqual(errors, []);
-  await a.close(); await b.close(); await resetContext.close();
+  await a.close(); await b.close();
   console.log('Cloud UI checks passed with HTTP fixtures: Supabase signup/login/logout, explicit encrypted opt-in, key never sent, second-device restore and cross-account protection. Real RLS is verified separately.');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

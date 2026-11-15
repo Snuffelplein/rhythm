@@ -97,10 +97,4 @@ export const systemClock: Clock = { now: () => new Date().toISOString() };
 export function emptyData(timezone = Intl.DateTimeFormat().resolvedOptions().timeZone): RhythmData {
     return { schemaVersion: 1, sessions: [], intent: null, wakeMarkers: [], checkins: [], journal: [], audit: [], settings: { timezone, goalBed: '', goalWake: '', theme: 'dark' } };
 }
-export function assertData(value: unknown): asserts value is RhythmData {
-    if (!value || typeof value !== 'object')
-        throw new Error('Ongeldig lokaal gegevensbestand.');
-    const data = value as Partial<RhythmData>;
-    if (data.schemaVersion !== 1 || !Array.isArray(data.sessions) || !Array.isArray(data.checkins) || !Array.isArray(data.journal) || !Array.isArray(data.audit) || !Array.isArray(data.wakeMarkers) || !data.settings || !('intent' in data))
-        throw new Error('Deze gegevensversie wordt niet ondersteund. De opslag is niet gewijzigd.');
-}
+export { assertData } from './validation';

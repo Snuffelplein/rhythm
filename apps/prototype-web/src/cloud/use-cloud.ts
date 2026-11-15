@@ -100,7 +100,7 @@ export function useCloud(props: Props) {
       try {
         const data = await engine.restore(id, password);
         latest.current.onRestore(data); setEnabled(true); setMessage('Je cloudkopie is ontgrendeld en lokaal beschikbaar.');
-      } finally { release(); }
+      } catch (reason) { latest.current.onLock(); throw reason; } finally { release(); }
     }),
     remove: () => action(async (engine, id) => {
       if (!engine || !id) return;

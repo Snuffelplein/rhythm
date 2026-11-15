@@ -1,12 +1,18 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import hosting from '../../vercel.json' with { type: 'json' };
+import { validatePublicConfig } from '../../scripts/validate-public-config.ts';
 const require = createRequire(import.meta.url);
 const runtimeDirectory = path.dirname(require.resolve('onnxruntime-web'));
 const runtimeFiles = ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.jsep.mjs', 'ort-wasm-simd-threaded.jsep.wasm'];
 const appFiles = ['/', '/index.html', '/rhythm.svg', '/manifest.webmanifest', '/icons/apple-touch-icon.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon-maskable-512.png'];
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  validatePublicConfig(env, hosting.headers.find(item => item.source === '/(.*)')!.headers.find(header => header.key === 'Content-Security-Policy')!.value);
+  return {
+  preview: { headers: Object.fromEntries(hosting.headers.find(item => item.source === '/(.*)')!.headers.map(({ key, value }) => [key, value])) },
   server: { fs: { deny: ['.env', '.env.*', '*.{crt,pem,key}', '**/.certs/**', '**/.git/**'] } },
   optimizeDeps: { include: ['@huggingface/transformers', '@mlc-ai/web-llm'] },
   worker: { format: 'es' },
@@ -34,4 +40,5 @@ self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(ev
 ` });
     },
   }],
+  };
 });

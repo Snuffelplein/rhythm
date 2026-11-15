@@ -9,7 +9,7 @@ let instance: SupabaseClient | null = null;
 export function cloudClient(): SupabaseClient | null {
   if (!supabaseUrl || !supabasePublishableKey) return null;
   if (!instance) instance = createClient(supabaseUrl, supabasePublishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'rhythm.auth.v1' },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'rhythm.auth.v1' },
   });
   return instance;
 }
@@ -29,16 +29,16 @@ export function remoteVaultStore(client: SupabaseClient, signal: AbortSignal): R
       if (error) failed(error.code);
       return data ? row(data) : null;
     },
-    async write(userId, envelope, revision, changeId) {
+    async write(userId, envelope, revision, changeId, expectedChangeId) {
       const payload = { user_id: userId, envelope, revision: (revision ?? 0) + 1, change_id: changeId };
-      const query = revision === null ? client.from('encrypted_vaults').insert(payload) : client.from('encrypted_vaults').update(payload).eq('user_id', userId).eq('revision', revision);
+      const query = revision === null ? client.from('encrypted_vaults').insert(payload) : client.from('encrypted_vaults').update(payload).eq('user_id', userId).eq('revision', revision).eq('change_id', expectedChangeId);
       const { data, error } = await query.select(columns).abortSignal(signal).maybeSingle();
       if (error?.code === '23505') return null;
       if (error) failed(error.code);
       return data ? row(data) : null;
     },
-    async remove(userId, revision) {
-      const { data, error } = await client.from('encrypted_vaults').delete().eq('user_id', userId).eq('revision', revision).select('user_id').abortSignal(signal);
+    async remove(userId, revision, expectedChangeId) {
+      const { data, error } = await client.from('encrypted_vaults').delete().eq('user_id', userId).eq('revision', revision).eq('change_id', expectedChangeId).select('user_id').abortSignal(signal);
       if (error) failed(error.code);
       return Boolean(data?.length);
     },

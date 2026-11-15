@@ -16,9 +16,10 @@ class Remote implements RemoteVaultStore {
   rows = new Map<string, RemoteVault>();
   loseResponse = false; offline = false;
   async read(id: string) { if (this.offline) throw new Error('offline'); return structuredClone(this.rows.get(id) ?? null); }
-  async write(id: string, envelope: Envelope, revision: number | null, changeId: string) {
+  async write(id: string, envelope: Envelope, revision: number | null, changeId: string, expectedChangeId: string | null) {
     if (this.offline) throw new Error('offline');
     if ((this.rows.get(id)?.revision ?? null) !== revision) return null;
+    if ((this.rows.get(id)?.changeId ?? null) !== expectedChangeId) return null;
     const row = { revision: (revision ?? 0) + 1, changeId, envelope, updatedAt: new Date().toISOString() };
     this.rows.set(id, structuredClone(row));
     if (this.loseResponse) { this.loseResponse = false; throw new Error('Response lost after commit'); }
@@ -29,7 +30,7 @@ class Remote implements RemoteVaultStore {
 async function device(remote: Remote) {
   const storage = new MemoryStorage(), vault = new BrowserVault(storage);
   await vault.unlock('only-on-device-key');
-  const data = emptyData(); data.journal.push({ id: 'note', atUtc: '2026-11-15T12:00:00Z', text: 'PRIVATE-CLOUD-SENTINEL', audio: { dataUrl: 'data:audio/wav;base64,PRIVATE-AUDIO', mimeType: 'audio/wav' } });
+  const data = emptyData(); data.journal.push({ id: 'note', atUtc: '2026-11-15T12:00:00Z', text: 'PRIVATE-CLOUD-SENTINEL', audio: { dataUrl: `data:audio/wav;base64,${btoa('PRIVATE-AUDIO')}`, mimeType: 'audio/wav' } });
   await vault.save(data);
   return { storage, vault, data, sync: new VaultSync(storage, vault, remote) };
 }
@@ -121,5 +122,20 @@ describe('encrypted account sync', () => {
     a.storage.setItem = (key, value) => { if (key === SYNC_KEY && JSON.parse(value).pending) throw new Error('quota'); original(key, value); };
     await expect(a.sync.sync('user-a')).rejects.toThrow('browseropslag vol');
     expect(remote.rows.size).toBe(0); expect(a.vault.encrypted()).toBe(before);
+  });
+  it('detects a deleted/recreated remote even when its revision repeats', async () => {
+    const remote = new Remote(), a = await device(remote);
+    a.sync.enable('user-a'); await a.sync.sync('user-a');
+    const original = remote.rows.get('user-a')!;
+    remote.rows.set('user-a', { ...original, changeId: crypto.randomUUID() });
+    a.data.journal[0]!.text = 'STALE-EDIT'; await a.vault.save(a.data);
+    await expect(a.sync.sync('user-a')).rejects.toBeInstanceOf(SyncConflict);
+  });
+  it('honors an opt-out made by another window during the network read', async () => {
+    const remote = new Remote(), a = await device(remote); a.sync.enable('user-a');
+    const read = remote.read.bind(remote);
+    remote.read = async id => { const result = await read(id); a.sync.disable('user-a'); return result; };
+    expect((await a.sync.sync('user-a')).status).toBe('disabled');
+    expect(remote.rows.size).toBe(0); expect(a.sync.enabled('user-a')).toBe(false);
   });
 });
