@@ -1,0 +1,12 @@
+.git
+.certs
+.vercel
+docs
+test-results
+node_modules
+**/dist
+.env*
+!.env.example
+*.pem
+*.key
+*.crt

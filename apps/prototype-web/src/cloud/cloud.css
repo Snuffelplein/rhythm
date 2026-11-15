@@ -1,0 +1,17 @@
+@media screen {
+  .cloud-panel { margin-top:0; margin-bottom:24px; }
+  .cloud-panel p { font-size: 16px; }
+  .cloud-panel label { display:flex; flex-direction:column; gap:8px; margin:18px 0; font-size:16px; font-weight:650; }
+  .cloud-panel .checkbox-label { flex-direction:row; align-items:flex-start; line-height:1.65; font-weight:500; }
+  .cloud-panel input[type=checkbox] { margin-top:6px; min-width:20px; min-height:20px; accent-color:#9775ff; }
+  .cloud-panel .checkbox-label span { min-width:0; }
+  .cloud-tabs { display:flex; gap:8px 16px; flex-wrap:wrap; margin-bottom:8px; }
+  .cloud-tabs .text-button { font-size:15px; text-align:left; }
+  .cloud-tabs [aria-pressed=true] { color:var(--text); text-decoration:underline; text-underline-offset:6px; }
+  .cloud-account { overflow-wrap:anywhere; margin-block:22px; }
+  .cloud-actions { display:grid; gap:10px; margin-top:18px; }
+  .cloud-enable { margin-block:22px; }
+  .cloud-restore { margin-top:22px; border-block:1px solid var(--border); padding-block:10px; }
+  .cloud-restore summary { font-size:16px; min-height:44px; cursor:pointer; line-height:1.7; padding-block:10px; color:var(--purple); font-weight:650; }
+  .cloud-status { margin:18px 0 0; padding:14px; border:1px solid #458f814d; border-radius:10px; background:#00c2ab0a; }
+}

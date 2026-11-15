@@ -1,0 +1,17 @@
+node_modules/
+.certs/
+dist/
+.vite/
+test-results/
+*.local
+.env*
+!.env.example
+.vercel/
+supabase/.temp/
+supabase/.branches/
+*.pem
+*.key
+*.crt
+
+# The docs graph is a private, local vault. Never publish it to the public repo.
+docs/

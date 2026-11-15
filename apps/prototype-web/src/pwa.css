@@ -1,0 +1,44 @@
+@media screen {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+  .app-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--safe-top) var(--safe-right) 0 var(--safe-left);
+  }
+  .app-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 auto;
+    height: var(--safe-top);
+    background: #0b0f1a;
+    z-index: 40;
+    pointer-events: none;
+  }
+  .sidebar { top: var(--safe-top); bottom: var(--safe-bottom); left: var(--safe-left); }
+  .modal {
+    inset: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px);
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 24px);
+  }
+  .home-screen-card p { font-size: 16px; }
+  .home-screen-card summary { cursor: pointer; min-height: 44px; padding-block: 10px; color: var(--purple); font-size: 16px; font-weight: 650; }
+  .home-screen-card ol { padding-left: 24px; color: var(--secondary); font-size: 16px; line-height: 1.75; }
+  .home-screen-card li { padding-left: 3px; margin-bottom: 12px; }
+  .home-screen-card li svg { vertical-align: -2px; display: inline; }
+  .home-screen-card .field-hint { margin-bottom: 0; }
+  @media (max-width: 700px) {
+    main { padding-bottom: calc(105px + var(--safe-bottom)); }
+    .mobile-nav {
+      left: var(--safe-left);
+      right: var(--safe-right);
+      height: calc(75px + max(9px, var(--safe-bottom)));
+      padding-bottom: max(9px, var(--safe-bottom));
+    }
+    .toast { bottom: calc(96px + var(--safe-bottom)); }
+  }
+}
