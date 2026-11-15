@@ -109,9 +109,10 @@ export function useCloud(props: Props) {
     logout: async () => {
       if (!client) return;
       controller.current?.abort();
+      latest.current.onLock();
       const { error: failure } = await client.auth.signOut({ scope: 'local' });
-      if (failure) setError('Uitloggen is niet gelukt. Probeer opnieuw.');
-      else { latest.current.onLock(); setRecovery(false); }
+      if (failure) setError('Je dagboek is vergrendeld. Uitloggen van je account is niet gelukt; probeer opnieuw zodra je verbinding hebt.');
+      else setRecovery(false);
     },
     updatePassword: (password: string) => action(async () => {
       if (!client) return;

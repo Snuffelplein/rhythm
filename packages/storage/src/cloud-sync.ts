@@ -31,7 +31,11 @@ export class VaultSync {
     if (state.owner !== userId) throw new AccountMismatch();
     return state;
   }
-  private save(state: SyncState) { this.check(); this.state(state.owner); this.storage.setItem(SYNC_KEY, JSON.stringify(state)); }
+  private save(state: SyncState) {
+    this.check(); this.state(state.owner);
+    try { this.storage.setItem(SYNC_KEY, JSON.stringify(state)); }
+    catch { throw new Error('De synchronisatiestatus kon niet lokaal worden bewaard. Mogelijk is de browseropslag vol. Je lokale dagboek is behouden; exporteer je gegevens voordat je opslag vrijmaakt.'); }
+  }
   private async stamp() {
     const raw = this.vault.encrypted();
     if (!raw) throw new Error('Maak of open eerst je lokale dagboek.');

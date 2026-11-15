@@ -114,4 +114,12 @@ describe('encrypted account sync', () => {
     await a.sync.remove('user-a');
     expect(remote.rows.size).toBe(0); expect(a.vault.encrypted()).not.toBeNull(); expect(a.sync.enabled('user-a')).toBe(false);
   });
+  it('does not start an upload when its pending write cannot be durably queued', async () => {
+    const remote = new Remote(), a = await device(remote);
+    a.sync.enable('user-a');
+    const original = a.storage.setItem.bind(a.storage), before = a.vault.encrypted();
+    a.storage.setItem = (key, value) => { if (key === SYNC_KEY && JSON.parse(value).pending) throw new Error('quota'); original(key, value); };
+    await expect(a.sync.sync('user-a')).rejects.toThrow('browseropslag vol');
+    expect(remote.rows.size).toBe(0); expect(a.vault.encrypted()).toBe(before);
+  });
 });
