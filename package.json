@@ -37,7 +37,8 @@
     "build:coach": "node scripts/build-coach-edge.mjs",
     "test:coach": "node scripts/build-coach-edge.mjs && node tests/coach-database.mjs && node tests/coaching-browser.mjs",
     "test:gemma4": "node tests/gemma4-browser.mjs",
-    "test:recovery": "node tests/recovery-browser.mjs"
+    "test:recovery": "node tests/recovery-browser.mjs",
+    "test:recovery:cross-context": "node tests/recovery-cross-context.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

@@ -19,9 +19,19 @@ Bij een herstelmail naar localhost: controleer zowel Site URL als toegelaten Red
 
 Controleer de e-mailprovider/SMTP, server-side wachtwoordbeleid, rate limits en CAPTCHA-keuze. De registratie-UI vraagt minstens twaalf tekens, maar die clientcontrole vervangt geen serverbeleid. De bestaande waarschuwing over uitgeschakelde leaked-password protection blijft open; de provider biedt die functie op Pro en hoger. Er is geen betaald plan aangezet.
 
-Test echte registratie, bevestiging, login, wachtwoordreset en terugkomst met behoud van accountgegevens. Open de PKCE-mailcallback in dezelfde browsercontext als de aanvraag. Safari en een iPhone-beginscherm-PWA delen hun opslag niet gegarandeerd; dit vraagt een fysieke toesteltest. Een reset herstelt accounttoegang tot nieuwe accountopslag; een vergeten oude kluissleutel blijft niet herstelbaar.
+Test echte registratie, bevestiging, login, wachtwoordreset en terugkomst met behoud van accountgegevens. De oude standaardherstelmail met `ConfirmationURL` gebruikt PKCE en werkt niet bij een overstap van PWA naar Safari zonder dezelfde browseropslag. Gebruik voor de productie-PWA daarom de hieronder voorbereide browseronafhankelijke mailtemplate. Een reset herstelt accounttoegang tot nieuwe accountopslag; een vergeten oude kluissleutel blijft niet herstelbaar.
 
 De app verwerkt herstel expliciet vóór het openen van accountgegevens. Nieuwe en bestaande PKCE-codecallbacks, oudere tokenfragmenten en recovery-tokenhashlinks worden door Supabase Auth gecontroleerd. Alleen de routeparameter geeft geen toegang tot het wachtwoordformulier. Herladen hervat een bevestigde reset met een kortlevende marker in tabopslag, gebonden aan gebruiker en sessie-id; de marker bevat geen tokens of wachtwoord. Verlopen/ongeldige links en ontbrekende PKCE-browserbewijzen geven een duidelijke nieuwe-mailflow. Callbackcredentials worden uit de adresbalk verwijderd. De actieve-sessiecontrole en wachtwoordmutatie gebruiken de vastgelegde herstel-JWT zodat een accountwissel in een andere tab geen ander account wijzigt. Dit is getest met `npm.cmd run test:recovery` en de echte SDK met uitsluitend synthetische HTTP-fixtures; er zijn geen echte herstelmails verstuurd.
+
+### Herstel vanuit de geïnstalleerde PWA
+
+De productie-mailinhoud staat in [supabase/templates/recovery.html](supabase/templates/recovery.html). Plaats die in **Supabase → Authentication → Email Templates → Reset Password**. Een repositorybestand past de gehoste mailtemplate niet automatisch aan; deze dashboardstap is een noodzakelijke activatie. De gekoppelde MCP-tools bieden geen Auth-templatebeheer. Bewaar desgewenst de bestaande template in het dashboard voordat je de nieuwe opslaat.
+
+De nieuwe link gaat rechtstreeks naar `https://rhythm-rho-bice.vercel.app/?auth=recovery&token_hash={{ .TokenHash }}&type=recovery`. De al aanwezige app wisselt dit eenmalige e-mailbewijs via `verifyOtp` uit voor een geverifieerde Supabase-sessie. Daarbij is geen verifier uit de aanvragende PWA nodig. Aanvragen in de PWA → link openen in Safari → nieuw wachtwoord kiezen → terug naar de PWA en inloggen met het nieuwe wachtwoord. De reset opent niet automatisch de geïnstalleerde PWA en meldt die PWA niet automatisch aan.
+
+Alleen de mailbezitter met een geldig eenmalig herstelbewijs kan deze route gebruiken; vervaldatum, eenmaligheid en verificatie blijven bij Supabase Auth. Normale PKCE-codeflows en alle eigenaar-/sessiecontroles blijven bestaan. Reeds verstuurde mails veranderen niet: vraag na activering een nieuwe mail aan. Deel geen ingevulde herstel-URL of token in chat/logs.
+
+`npm.cmd run test:recovery:cross-context` test de echte template-link en SDK met twee volledig gescheiden browsercontexten, zonder gedeelde PKCE-opslag, plus reset, opnieuw inloggen vanuit de oorspronkelijke context en afwijzen van hergebruik. Dit gebruikt uitsluitend synthetische Auth-fixtures en bewijst geen daadwerkelijke gehoste template-activatie, mailaflevering of fysieke iPhone-werking.
 
 ## Offline en synchronisatie
 
