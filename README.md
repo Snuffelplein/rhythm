@@ -42,6 +42,8 @@ Open het vaste Rhythm-adres in Safari en kies **Deel → Zet op beginscherm**. L
 - CSV, JSON en afdrukbaar rapport/PDF. Vrije notities, profiel en persoonlijke context zijn standaard uitgesloten van JSON. Expliciet opnemen voegt deze en reeds gedownloade audio toe; uitsluitend online beschikbare opnamen staan als verwijzing in de export.
 - Donker/licht thema, grotere mobiele tekst, rustige animaties en verminderde beweging.
 
+Whisper gebruikt vanaf 0.7.1 het meertalige Base-model met vaste Nederlandse transcriptie, ruimere uitvoerlengte en overlappende audiostukken. Laad Whisper na herladen opnieuw om de nieuwe modelbestanden te downloaden. Transcripties blijven concepten die je controleert. De expliciete `npm.cmd run test:whisper:nl -- --label=current --long --check` downloadt enkele openbare Nederlandse FLEURS-testopnamen en verwerkt die lokaal; de kleine proef vervangt geen test op de eigen iPhone.
+
 ## Hosting
 
 De repository bevat `vercel.json` voor Vercel. Importeer de repository met de repositoryroot als Root Directory; het buildcommando en de outputmap staan al ingesteld. Zie **[DEPLOYMENT.md](DEPLOYMENT.md)** voor Supabase, e-mailredirects en verificatie vóór de pilot.

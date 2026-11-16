@@ -1,4 +1,5 @@
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import { WHISPER_MODEL,WHISPER_OPTIONS } from './whisper-config';
 
 env.allowLocalModels = false;
 env.useBrowserCache = false;
@@ -20,7 +21,7 @@ self.addEventListener('message', async (event: MessageEvent<{ id: number; type: 
   const { id, type, audio } = event.data;
   try {
     if (type === 'load') {
-      transcriber = await createTranscriber('automatic-speech-recognition', 'onnx-community/whisper-tiny', {
+      transcriber = await createTranscriber('automatic-speech-recognition', WHISPER_MODEL, {
         device: 'wasm', dtype: 'q8',
         progress_callback: progress => {
           if (progress.status === 'progress') self.postMessage({ id, type: 'progress', progress: (progress.progress ?? 0) / 100 });
@@ -29,8 +30,8 @@ self.addEventListener('message', async (event: MessageEvent<{ id: number; type: 
       self.postMessage({ id, type: 'result' });
     } else {
       if (!transcriber || !audio) throw new Error('Whisper is nog niet geladen.');
-      self.postMessage({ id, type: 'phase', message: 'Whisper zet je opname lokaal om…' });
-      const result = await transcriber(audio, { language: 'dutch', task: 'transcribe', chunk_length_s: 30, stride_length_s: 5, max_new_tokens: 128 });
+      self.postMessage({ id, type: 'phase', message: 'Whisper transcribeert lokaal in het Nederlands…' });
+      const result = await transcriber(audio, { ...WHISPER_OPTIONS });
       self.postMessage({ id, type: 'result', text: (Array.isArray(result) ? result[0]?.text : result.text)?.trim() ?? '' });
     }
   } catch {

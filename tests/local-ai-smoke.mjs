@@ -14,7 +14,7 @@ try{
   // Retain model downloads between runs, but never run stale application code from the static shell cache.
   await page.evaluate(async()=>{for(const registration of await navigator.serviceWorker.getRegistrations())await registration.unregister();for(const key of await caches.keys())if(key.startsWith('rhythm-static-'))await caches.delete(key);});
   await page.goto('about:blank');
-  await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:5173');
+  await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:4178');
   await page.locator('.app-shell').waitFor();
   const nav=page.getByRole('navigation',{name:'Hoofdnavigatie'});
   await nav.getByRole('button',{name:'Meer',exact:true}).click();

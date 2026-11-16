@@ -2,8 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { buildSummaryPrompt, releaseModels, summarizeNote, transcribeAudio } from '../apps/prototype-web/src/ai/local-ai';
 import { emptyData } from '../packages/domain/src/index';
 import { exportJson } from '../packages/exports/src/index';
+import { WHISPER_MODEL, WHISPER_OPTIONS } from '../apps/prototype-web/src/ai/whisper-config';
 
 describe('local AI boundaries and linked diary records', () => {
+  it('transcribes Dutch with a multilingual model and a full chunk token budget',()=>{
+    expect(WHISPER_MODEL).toBe('onnx-community/whisper-base');
+    expect(WHISPER_MODEL.endsWith('.en')).toBe(false);
+    expect(WHISPER_OPTIONS.language).toBe('dutch');
+    expect(WHISPER_OPTIONS.task).toBe('transcribe');
+    expect(WHISPER_OPTIONS.max_new_tokens).toBeGreaterThan(128);
+    expect(WHISPER_OPTIONS.max_new_tokens+4).toBeLessThanOrEqual(448);
+    expect(WHISPER_OPTIONS.return_timestamps).toBe(true);
+  });
   it('uses only the explicitly supplied note as summary context', () => {
     const prompt = buildSummaryPrompt('Mijn eigen notitie');
     expect(prompt).toContain('<notitie>\nMijn eigen notitie\n</notitie>');

@@ -13,7 +13,7 @@ export async function accountFixture(context,{data=emptyAccount(),seed=true,shar
  if(seed)await context.addInitScript(({s})=>{if(!localStorage.getItem('rhythm.fixture.initialized')){localStorage.setItem('rhythm.auth.v1',JSON.stringify(s));localStorage.setItem('rhythm.fixture.initialized','1');}},{s:session(userA)});
  await context.route('https://*.supabase.co/**',async route=>{
   const req=route.request(),url=new URL(req.url());let body;try{body=req.postDataJSON();}catch{}
-  state.requests.push({path:url.pathname,method:req.method(),body});
+  state.requests.push({path:url.pathname,method:req.method(),body,redirectTo:url.searchParams.get('redirect_to')});
   const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-expose-headers':'content-range'};
   const respond=(data,status=200)=>route.fulfill({status,contentType:'application/json',headers,body:JSON.stringify(data)});
   if(req.method()==='OPTIONS')return respond({});

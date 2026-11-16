@@ -8,8 +8,8 @@ export function ModelControls() {
   const loading = status.whisper.state === 'loading' || status.gemma.state === 'loading';
   return <div className="model-controls">
     <p className="model-privacy"><ShieldCheck size={16} /> Na de modeldownload gebeurt verwerking op dit apparaat. Audio en tekst worden niet naar een AI-server gestuurd.</p>
-    {[{ id: 'whisper' as const, name: 'Whisper', description: 'Spraak naar Nederlandse tekst', size: 'Circa 80–120 MB, inclusief spraakruntime', load: loadWhisper },
-      { id: 'gemma' as const, name: 'Gemma', description: 'Een conceptsamenvatting van je eigen notitie', size: 'Reken op circa 1 GB vrije ruimte · WebGPU nodig', load: loadGemma }].map(model => {
+    {[{ id: 'whisper' as const, name: 'Whisper', description: 'Nederlandse transcriptie · Whisper Base', size: 'Grotere modeldownload dan Tiny · lokaal op dit apparaat', load: loadWhisper },
+      { id: 'gemma' as const, name: 'Gemma', description: 'Klein lokaal model · korte samenvatting van je notitie', size: 'Reken op circa 1 GB vrije ruimte · WebGPU nodig', load: loadGemma }].map(model => {
         const value = status[model.id];
         return <div className="model-option" key={model.id}>
           <div><strong>{model.name}</strong><span>{model.description}</span><small><HardDrive size={12} />{model.size}</small></div>
