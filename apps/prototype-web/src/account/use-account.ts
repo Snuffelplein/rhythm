@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import type { RhythmData } from '../../../../packages/domain/src/index';
 import { AccountConflict,AccountStore } from '../../../../packages/storage/src/account-sync';
 import { forgetAccount,IndexedAccountCache,rememberAccount,rememberedAccount,type AccountSnapshot,type RememberedAccount } from '../../../../packages/storage/src/account-cache';
-import { cloudClient,supabaseUrl,supabasePublishableKey } from '../cloud/client';
+import { cloudClient,supabaseUrl,supabasePublishableKey,requestPasswordRecovery } from '../cloud/client';
 import { SessionRequired,SupabaseAccountRemote } from './remote';
 import {authLanding,completeAuthLanding,rememberRecovery,clearRecovery,recoveryRedirect,recoveryBinding} from './auth-landing';
 export type AccountPhase='boot'|'auth'|'load-error'|'wizard'|'ready'|'recovery'|'recovery-error';
@@ -90,9 +90,9 @@ export function useAccount(){
     if(!client)return;setAuthBusy(true);setError('');setMessage('');
     try{
       if(!navigator.onLine)throw new Error('Voor aanmelden is internet nodig. Blijf ingelogd om je account later offline te gebruiken.');
-      const response=kind==='login'?await client.auth.signInWithPassword({email,password}):kind==='signup'?await client.auth.signUp({email,password,options:{emailRedirectTo:location.origin}}):await client.auth.resetPasswordForEmail(email,{redirectTo:recoveryRedirect(location.origin)});
+      const response=kind==='login'?await client.auth.signInWithPassword({email,password}):kind==='signup'?await client.auth.signUp({email,password,options:{emailRedirectTo:location.origin}}):await requestPasswordRecovery(email,recoveryRedirect(location.origin));
       if(response.error)throw new Error(response.error.status===429?'Te veel pogingen. Wacht even en probeer opnieuw.':response.error.code==='email_not_confirmed'?'Bevestig je e-mailadres via de ontvangen e-mail en log daarna in.':'Dit is niet gelukt. Controleer je e-mailadres, wachtwoord en verbinding.');
-      setMessage(kind==='signup'?'Controleer je e-mail om je account te bevestigen. Log daarna hier in.':kind==='reset'?'Als dit adres bekend is, ontvang je een herstelmail. Open die in dezelfde browser als deze aanvraag.':'');
+      setMessage(kind==='signup'?'Controleer je e-mail om je account te bevestigen. Log daarna hier in.':kind==='reset'?'Als dit adres bekend is, ontvang je een herstelmail. Je kunt de link ook buiten de PWA openen. Log na de reset met je nieuwe wachtwoord in bij Rhythm.':'');
     }catch(reason){setError(reason instanceof Error?reason.message:'Aanmelden is niet gelukt.');}finally{setAuthBusy(false);}
   }
   async function logout(){

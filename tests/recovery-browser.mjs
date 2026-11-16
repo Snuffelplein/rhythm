@@ -15,7 +15,7 @@ try{
  for(const marked of [true,false]){
   const {context,page,state}=await setup({seed:false});
   await page.goto(base);await page.getByRole('button',{name:'Wachtwoord vergeten?',exact:true}).click();await page.getByLabel('E-mailadres',{exact:true}).fill('a@example.invalid');await page.getByRole('button',{name:'Stuur herstelmail',exact:true}).click();await page.getByText(/Als dit adres bekend is/).waitFor();
-  const request=state.requests.find(r=>r.path.endsWith('/recover'));assert.equal(request.redirectTo,new URL(base).origin+'/?auth=recovery');assert.equal(request.body.code_challenge_method,'s256');
+  const request=state.requests.find(r=>r.path.endsWith('/recover'));assert.equal(request.redirectTo,new URL(base).origin+'/?auth=recovery');assert.ok(!request.body.code_challenge_method);await page.evaluate(()=>localStorage.setItem('rhythm.auth.v1-code-verifier',JSON.stringify('synthetic-legacy-verifier/recovery')));
   await page.goto(base+(marked?'/?auth=recovery&code=synthetic-code':'/?code=synthetic-code'));await heading(page).waitFor();assert.ok(!page.url().includes('code='));assert.equal(new URL(page.url()).searchParams.get('auth'),'recovery');
   assert.equal(state.requests.filter(r=>r.path.endsWith('/account_data')).length,0,'Do not load account content before finishing recovery');
   await page.reload();await heading(page).waitFor();await replacePassword(page);assert.ok(!page.url().includes('auth=recovery'));assert.equal(state.requests.filter(r=>r.method==='PUT'&&r.path.endsWith('/user')).length,1);await context.close();

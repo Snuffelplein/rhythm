@@ -7,6 +7,15 @@ import type { RemoteVault, RemoteVaultStore } from '../../../../packages/storage
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? 'https://hphwmhmssexnrhkcxdpi.supabase.co';
 export const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_vPTUZQn9GkbCAx9e67pobg_zt3Im8QC';
 let instance: SupabaseClient | null = null;
+let recoveryRequests:SupabaseClient|null=null;
+export function requestPasswordRecovery(email:string,redirectTo:string){
+  // Only the recovery request uses an email-possession flow. The main client
+  // keeps PKCE; no verifier or existing account session is copied or replaced.
+  recoveryRequests??=createClient(supabaseUrl,supabasePublishableKey,{
+    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,flowType:'implicit',storageKey:'rhythm.recovery-request.v1'},
+  });
+  return recoveryRequests.auth.resetPasswordForEmail(email,{redirectTo});
+}
 export function cloudClient(): SupabaseClient | null {
   if (!supabaseUrl || !supabasePublishableKey) return null;
   if (!instance) instance = createClient(supabaseUrl, supabasePublishableKey, {
