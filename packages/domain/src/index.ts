@@ -38,6 +38,20 @@ export interface JournalEntry {
     text: string;
     sleepSessionId?: string;
     audio?: { dataUrl: string; mimeType: string };
+    audioRef?: { path: string; mimeType: string; sha256: string; size: number };
+}
+export type SleepChallenge = 'shifting' | 'falling_asleep' | 'split_sleep' | 'daytime_tired' | 'structure';
+export type PersonalGoal = 'understand' | 'energy' | 'routine' | 'professional';
+export interface UserProfile {
+    version: 1;
+    givenName: string;
+    birthDate: string;
+    challenges: SleepChallenge[];
+    duration: 'recent' | 'months' | 'longer' | 'unspecified';
+    context: string;
+    goals: PersonalGoal[];
+    completedAtUtc: string;
+    onboardingStep?: number;
 }
 export interface AuditEvent {
     id: string;
@@ -74,6 +88,7 @@ export interface RhythmData {
     audit: AuditEvent[];
     settings: Settings;
     guidance?: GuidancePreferences;
+    profile?: UserProfile;
 }
 export interface Clock {
     now(): string;

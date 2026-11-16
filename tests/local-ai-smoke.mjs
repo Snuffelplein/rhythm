@@ -1,19 +1,21 @@
+import {accountFixture,visualAccount} from './fixtures/account.mjs';
 // Explicit opt-in test: downloads local models and a public speech fixture into an isolated browser context.
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 await mkdir('test-results',{recursive:true});
 const context=await chromium.launchPersistentContext('test-results/ai-profile',{channel:'msedge',headless:true,viewport:{width:1280,height:1000},locale:'nl-NL'});
+await accountFixture(context);
 const page=await context.newPage();page.setDefaultTimeout(180000);
-const externalPosts=[];page.on('request',request=>{const url=new URL(request.url());if(url.protocol==='https:'&&request.method()!=='GET'&&request.method()!=='HEAD')externalPosts.push(url.origin);});
+const externalPosts=[];page.on('request',request=>{const url=new URL(request.url());if(url.protocol==='https:'&&!url.hostname.endsWith('.supabase.co')&&request.method()!=='GET'&&request.method()!=='HEAD')externalPosts.push(url.origin);});
 let timer;
 try{
-  await page.goto(`${process.env.RHYTHM_TEST_URL??'http://127.0.0.1:5173'}/?testBuild=${Date.now()}`);
+  await page.goto(`${process.env.RHYTHM_TEST_URL??'http://127.0.0.1:4178'}/?testBuild=${Date.now()}`);
   // Retain model downloads between runs, but never run stale application code from the static shell cache.
   await page.evaluate(async()=>{for(const registration of await navigator.serviceWorker.getRegistrations())await registration.unregister();for(const key of await caches.keys())if(key.startsWith('rhythm-static-'))await caches.delete(key);});
   await page.goto('about:blank');
   await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:5173');
-  await page.getByRole('button',{name:'Bekijk de demo',exact:true}).click();
+  await page.locator('.app-shell').waitFor();
   const nav=page.getByRole('navigation',{name:'Hoofdnavigatie'});
   await nav.getByRole('button',{name:'Meer',exact:true}).click();
   timer=setInterval(async()=>{try{console.log((await page.locator('.model-status').allTextContents()).join(' | '));}catch{}},15000);

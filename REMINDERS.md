@@ -1,16 +1,16 @@
 # Personal guidance and optional Web Push
 
-Version 0.6.0 adds a local day plan, explainable observations, routine settings and feedback. Targets are user-confirmed, not medically optimal sleep prescriptions. Gemma remains an optional journal summarizer; guidance rules work without AI.
+Version 0.7.0 retains the day plan introduced in 0.6.0, explainable observations, routine settings and feedback. Targets are user-confirmed, not medically optimal sleep prescriptions. Gemma remains an optional journal summarizer; guidance rules work without AI.
 
 ## Local guidance
 
-Today shows the next planned moments. The alarm/day-structure page contains the full plan, routine settings, optional commitments and push controls. Feedback is stored in the encrypted vault, including why a plan was difficult. Recent low energy, explicit difficulties, differences between recorded starts and chosen targets, and nearby commitments can inform the displayed support. Sparse/scattered registrations do not justify a stable trend or diagnosis.
+Today shows the next planned moments. The alarm/day-structure page contains the full plan, routine settings, optional commitments and push controls. Feedback is stored in the user account and offline cache, including why a plan was difficult. Recent low energy, explicit difficulties, differences between recorded starts and chosen targets, and nearby commitments can inform the displayed support. Sparse/scattered registrations do not justify a stable trend or diagnosis.
 
-Existing schema-one vaults without `guidance` remain readable. Guidance is an optional field, encrypted along with the rest of the diary and excluded from default JSON exports. Explicit journal inclusion includes it in JSON. Commitments are never uploaded as push content.
+Existing schema-one vaults without `guidance` remain readable. Guidance is an optional field, protected by account/session RLS with the rest of the diary and excluded from default JSON exports. Explicit journal inclusion includes it in JSON. Commitments are never uploaded as push content.
 
 ## Push activation status
 
-**The push backend is active on the configured Supabase project.** The user explicitly approved the database, Vault, Edge Function and minute scheduler rollout. Hosted owner/session isolation, generic HTTP denial tests and the scheduler-to-function path have passed. The 0.6.0 frontend is now on [the fixed production address](https://rhythm-rho-bice.vercel.app/); actual headers, version, guidance and offline PWA have been checked. Auth admin/email configuration and physical iPhone delivery remain separate release checks.
+**The push backend is active on the configured Supabase project.** The user explicitly approved the database, Vault, Edge Function and minute scheduler rollout. Hosted owner/session isolation, generic HTTP denial tests and the scheduler-to-function path have passed. The frontend is published on [the fixed production address](https://rhythm-rho-bice.vercel.app/); actual headers, version, guidance and offline PWA have been checked. Auth admin/email configuration and physical iPhone delivery remain separate release checks.
 
 Applied migrations are `20261115221529_personal_guidance_push`, `20261115221738_push_policy_hardening` and `20261115222412_single_use_push_cron_tickets`. Filenames match the actual hosted history. Do not replay these migrations on the configured project.
 

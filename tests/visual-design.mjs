@@ -1,25 +1,28 @@
+import {accountFixture,visualAccount} from './fixtures/account.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', reducedMotion: 'no-preference' });
+await accountFixture(context,{data:visualAccount()});
 const page = await context.newPage(); page.setDefaultTimeout(12000);
 const errors = []; page.on('pageerror', error => errors.push(error.message));
 const base = process.env.RHYTHM_TEST_URL ?? 'http://127.0.0.1:4178';
 await mkdir('test-results', { recursive: true });
 try {
-  await page.clock.install({ time: new Date('2026-11-15T18:00:00Z') });
+  await page.clock.setFixedTime(new Date('2026-11-15T18:00:00Z'));
   await page.goto(base);
-  assert.equal(await page.locator('.ring-segment.recorded').count(), 0, 'Empty data must not invent progress');
-  await page.getByRole('button', { name: 'Bekijk de demo', exact: true }).click();
+
+  await page.locator('.app-shell').waitFor();
   assert.equal(await page.locator('.ring-segment.recorded').count(), 12, 'Ring segments must match actual logged days');
   assert.match(await page.locator('.ring-caption').innerText(), /12 van 14/);
   const actionBounds = await page.getByRole('button', { name: 'Ik ga slapen', exact: true }).boundingBox();
   const navBounds = await page.getByRole('navigation', { name: 'Mobiele navigatie' }).boundingBox();
   assert.ok(actionBounds && navBounds && actionBounds.y + actionBounds.height <= navBounds.y, 'The primary sleep action must remain above the mobile tabbar');
+  await page.waitForFunction(()=>document.querySelector('.rhythm-ring')?.classList.contains('is-visible'));
   const transform = await page.locator('.ring-orbit').evaluate(element => getComputedStyle(element).transform);
-  await page.waitForTimeout(220);
+  await page.waitForFunction(before=>getComputedStyle(document.querySelector('.ring-orbit')).transform!==before,transform);
   assert.notEqual(await page.locator('.ring-orbit').evaluate(element => getComputedStyle(element).transform), transform, 'The orbit must actually animate');
   await page.locator('.app-footer').scrollIntoViewIfNeeded();
   await page.waitForFunction(() => !document.querySelector('.rhythm-ring')?.classList.contains('is-visible'));

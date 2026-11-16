@@ -13,20 +13,17 @@ npm.cmd run dev
 
 Op Windows bouwt **Start-Rhythm.cmd** de productieversie en opent deze op `http://127.0.0.1:5173`. **Start-Rhythm-Mobiel.cmd** biedt een tijdelijke HTTPS-preview met QR-code. Houd het startvenster open. Voor een langdurige pilot gebruik je één vast productieadres; de QR-link verandert bij een nieuwe tunnel.
 
-## Accounts en versleutelde synchronisatie
+## Eén account, ook offline
 
-Open **Meer → Account & synchronisatie**. Supabase Auth verzorgt registreren, e-mailbevestiging, inloggen, accountherstel en uitloggen. Je kunt ook zonder account lokaal loggen.
+Rhythm 0.7.0 opent met één inlogscherm voor Supabase Auth. Na e-mailbevestiging en inloggen doorloop je een korte welkomstwizard: roepnaam, optionele geboortedatum, herkenbare slaapproblemen, doelen en eigen dagankers. Je begroeting en suggesties gebruiken dat profiel. Je kunt het later bij **Meer → Mijn account** aanpassen.
 
-Je **kluiswachtwoord** is apart van je **accountwachtwoord**. Kies verschillende wachtwoorden en bewaar het kluiswachtwoord goed: een accountreset kan je versleutelde inhoud niet ontsleutelen.
+Er is één accountwachtwoord, geen apart kluiswachtwoord. Slaapblokken, energie, dagboek, profiel, begeleiding en instellingen synchroniseren automatisch naar Supabase. Opnamen die je expliciet bewaart gaan naar privéopslag. Auth, eigenaarspolicies en actieve-sessiecontrole beschermen de toegang; inhoud is voor de backend leesbaar en is **niet end-to-end versleuteld**. Een accountreset geeft toegang tot je opgeslagen accountgegevens.
 
-1. Maak of ontgrendel een lokaal dagboek.
-2. Maak een account, bevestig je e-mail en log in.
-3. Ontgrendel je lokale dagboek en kies expliciet voor synchronisatie.
-4. Op een ander apparaat: log in en kies **Cloudkopie ophalen op dit apparaat**, met hetzelfde kluiswachtwoord.
+Een bevestigde invoer wordt eerst duurzaam op het apparaat bewaard. Blijf ingelogd voor offline gebruik. Bij terugkeer van internet synchroniseert de geopende app automatisch; iOS garandeert geen synchronisatie terwijl een PWA gesloten is. De zichtbare status onderscheidt een lokale opslagactie van een bevestigde online opslagactie. Browseropslag wissen kan nog niet gesynchroniseerde invoer verwijderen.
 
-Slaapblokken, wakkerregistraties, energie/slaperigheid, tekstnotities en dagankers worden op het apparaat versleuteld vóór upload. Audio blijft lokaal. Na lokale wijzigingen, terugkomst in de app of opnieuw verbinden probeert de geopende app te synchroniseren. Vergrendeld of uitgelogd wordt geen nieuwe inhoud versleuteld voor upload.
+Een revisiecontrole en samenvoeging per registratie bewaren onafhankelijke wijzigingen op meerdere apparaten. Tegenstrijdige wijzigingen stoppen met een melding; er wordt niets stilzwijgend overschreven. De laatste tien online versies en tien bewaarpunten bij herstel/conflict zijn toegankelijk onder **Herstel & oude registraties**. Opnamen van andere apparaten worden op aanvraag gedownload en blijven daarna offline beschikbaar.
 
-Deze eerste integratie synchroniseert één versleutelde momentopname per account. Een revisiecontrole voorkomt dat gelijktijdige wijzigingen stilzwijgend over elkaar heen worden geschreven. Bij een conflict blijven beide kopieën behouden; exporteer je lokale wijzigingen voordat je een cloudkopie ophaalt. Automatisch samenvoegen is nog niet beschikbaar. Synchronisatie vervangt geen afzonderlijke back-up.
+Bij updates blijven bestaande kluizen intact. Via **Meer → Mijn account → Herstel & oude registraties** kun je oude lokale of online registraties eenmalig importeren met het oude kluiswachtwoord. De originele kluis wordt niet aangepast. Gebruik dezelfde origin en browseromgeving waar je eerder registreerde. Terughalen is alleen mogelijk als die oude kopie nog bestaat.
 
 De project-URL en publishable key in de browserconfiguratie zijn openbaar bedoeld. Autorisatie wordt afgedwongen door Supabase Auth en database-RLS. Een ander project kan via `.env.local` worden ingesteld; zie `.env.example`. Gebruik nooit een secret- of service-role-sleutel in de webapp.
 
@@ -41,8 +38,8 @@ Open het vaste Rhythm-adres in Safari en kies **Deel → Zet op beginscherm**. L
 - Begeleide slaapregistratie → energie/slaperigheid → optioneel dagboek.
 - 7/14/30/90-daags actogram, 24-uurtotaal, dagankers en inzicht in registratiedekking.
 - Tekst/audio, optionele lokale Whisper-transcriptie en Gemma-samenvatting. Voorstellen eerst controleren; modellen downloaden alleen na een eigen keuze bij Meer of bij de dagboekinvoer.
-- AES-GCM-browserkluis, optionele versleutelde cloudsynchronisatie en apart demogeheugen.
-- CSV, JSON en afdrukbaar rapport/PDF. Vrije notities zijn standaard uitgesloten van exports. Voor een volledige eigen export kies je expliciet dagboeknotities mee te nemen; bewaarde audio gaat dan mee in JSON.
+- Eén account, hervatbare welkomstwizard, persoonlijke begroeting, automatische synchronisatie en versleutelde offline apparaatkopie.
+- CSV, JSON en afdrukbaar rapport/PDF. Vrije notities, profiel en persoonlijke context zijn standaard uitgesloten van JSON. Expliciet opnemen voegt deze en reeds gedownloade audio toe; uitsluitend online beschikbare opnamen staan als verwijzing in de export.
 - Donker/licht thema, grotere mobiele tekst, rustige animaties en verminderde beweging.
 
 ## Hosting
@@ -59,7 +56,7 @@ npm.cmd run test:pwa
 npm.cmd run test:mobile
 ```
 
-De cloudbrowsertest gebruikt HTTP-fixtures met de echte Supabase JS-client en verstuurt geen e-mails. `tests/rls-vault.sql` controleert de echte database-isolatie met tijdelijke fixtures die volledig worden teruggedraaid.
+De cloudbrowsertest gebruikt HTTP-fixtures met de echte Supabase JS-client en verstuurt geen e-mails. `npm.cmd run test:account` voegt lokale Postgres/RLS-validatie toe. `tests/rls-account.sql` toetst de echte database met synthetische fixtures in een volledige rollback. `node tests/account-data-browser.mjs` controleert oude kluizen, audio en herstelpunten. Browsercontroles vragen de lokale previewserver.
 
 Voor de volledige browserregressie start je in een eerste terminal:
 
@@ -80,9 +77,9 @@ Browsercontroles gebruiken Microsoft Edge via Playwright. Voor de echte modelket
 
 ## Beveiliging
 
-De webapp staat op [rhythm-rho-bice.vercel.app](https://rhythm-rho-bice.vercel.app/). Versie 0.6.0 voegt een persoonlijk dagplan, uitlegbare patroonfeedback en terugkoppeling bij moeilijke momenten toe. De werkelijke hostingheaders en offline PWA zijn gecontroleerd. Routineherinneringen zijn expliciete opt-in; de Supabase-backend is geactiveerd en technisch gecontroleerd. Echte Auth-mail en bezorging op iPhone blijven te valideren. Zie [REMINDERS.md](REMINDERS.md) voor werking, privacy en verificatie.
+De webapp staat op [rhythm-rho-bice.vercel.app](https://rhythm-rho-bice.vercel.app/). Controleer de geleverde versie na iedere deployment. Routineherinneringen zijn afzonderlijke opt-in; de Supabase-backend is geactiveerd en technisch gecontroleerd. Echte Auth-mail en bezorging op iPhone blijven te valideren. Zie [REMINDERS.md](REMINDERS.md) voor werking, privacy en verificatie.
 
-Lees [SECURITY.md](SECURITY.md) voor auditcommando's, sessiecontrole, automatische vergrendeling, PKCE en de controles die nog op het echte productieadres moeten plaatsvinden. Een geslaagde scan geeft geen garantie van 100% veiligheid.
+Lees [SECURITY.md](SECURITY.md) voor auditcommando's, sessiecontrole, offline apparaatopslag, PKCE en de controles voor het echte productieadres. Een geslaagde scan geeft geen garantie van 100% veiligheid.
 
 ## Grenzen en documentatie
 

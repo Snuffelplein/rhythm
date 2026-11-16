@@ -51,11 +51,8 @@ try {
   const page = await context.newPage(); page.setDefaultTimeout(20000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(origin);
-  await page.getByRole('heading', { name: 'Jouw ritme begint hier.' }).waitFor();
-  const nav = page.getByRole('navigation', { name: 'Mobiele navigatie' });
-  await nav.getByRole('button', { name: 'Meer', exact: true }).click();
-  assert.ok((await page.locator('.version-note').innerText()).startsWith(`Rhythm ${packageInfo.version} ·`), 'Hosted app must match the checked-out release version');
-  await nav.getByRole('button', { name: 'Vandaag', exact: true }).click();
+  await page.getByRole('heading', { name: 'Welkom terug',exact:true }).waitFor();
+  assert.ok((await page.locator('.account-entry>footer').innerText()).startsWith('Rhythm '+packageInfo.version+' '), 'Hosted release version must match');
   evidence.version = packageInfo.version;
   evidence.checks.push('expected-app-version');
   assert.equal(await page.evaluate(() => isSecureContext), true);
@@ -81,12 +78,9 @@ try {
   });
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
   await context.setOffline(true); await page.reload();
-  await page.getByRole('heading', { name: 'Jouw ritme begint hier.' }).waitFor();
-  await page.getByRole('button', { name: 'Bekijk de demo', exact: true }).click();
-  await page.getByText('Je bekijkt voorbeeldgegevens.', { exact: false }).waitFor();
-  await page.getByRole('region', { name: 'Persoonlijke begeleiding' }).getByRole('heading', { name: 'Een haalbaar plan voor jou' }).waitFor();
+  await page.getByRole('heading', { name: 'Welkom terug',exact:true }).waitFor();
   assert.deepEqual(errors, []);
-  evidence.checks.push('standalone-manifest-icons-and-offline-demo');
+  evidence.checks.push('standalone-manifest-icons-and-offline-login-shell');
   evidence.status = 'passed';
   console.log(`Hosted preview checks passed for ${origin}. Email delivery, Auth admin settings and physical iPhone remain separate checks.`);
 } catch (error) {

@@ -1,3 +1,4 @@
+import {accountFixture,visualAccount} from './fixtures/account.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
@@ -13,11 +14,12 @@ try {
   await mkdir('test-results', { recursive: true });
   const profile = await mkdtemp(path.resolve('test-results/pwa-profile-'));
   context = await chromium.launchPersistentContext(profile, { channel: 'msedge', headless: true, viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  await accountFixture(context);
   const page = await context.newPage();
   page.setDefaultTimeout(12000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(base);
-  await page.getByRole('heading', { name: 'Jouw ritme begint hier.' }).waitFor();
+  await page.locator('.app-shell').waitFor();
   const cdp = await context.newCDPSession(page);
   const parsed = await cdp.send('Page.getAppManifest');
   assert.deepEqual(parsed.errors, [], 'Browser must parse the manifest without errors');
@@ -60,7 +62,7 @@ try {
   await page.getByText('Open als webapp', { exact: true }).waitFor();
   await mkdir('test-results', { recursive: true });
   await page.locator('.home-screen-card').screenshot({ path: 'test-results/pwa-home-screen-help.png' });
-  await page.getByRole('button', { name: 'Start mijn dagboek', exact: true }).click();
+  await page.getByRole('button', { name: 'Mijn profiel aanpassen', exact: true }).click();
   const dialog = await page.getByRole('dialog').boundingBox();
   assert.ok(dialog.y >= 47 && dialog.y + dialog.height <= 844 - 34, 'Dialog must fit between the safe areas');
   await page.getByRole('button', { name: 'Sluiten', exact: true }).click();
@@ -74,7 +76,7 @@ try {
 
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole('heading', { name: 'Jouw ritme begint hier.' }).waitFor();
+  await page.locator('.app-shell').waitFor();
   for (const url of ['/manifest.webmanifest', ...icons.map(icon => icon.src)]) {
     assert.equal(await page.evaluate(async src => (await fetch(src)).status, url), 200, `${url} must work offline`);
   }

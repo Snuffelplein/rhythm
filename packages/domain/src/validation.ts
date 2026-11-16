@@ -17,12 +17,21 @@ function entities(value: unknown, validate: (item: unknown) => Record<string, un
   for (const item of list(value)) { const v = validate(item); text(v.id); if (ids.has(v.id)) invalid(); ids.add(v.id); }
 }
 export function assertData(value: unknown): asserts value is RhythmData {
-  const data = record(value, ['schemaVersion', 'sessions', 'intent', 'wakeMarkers', 'checkins', 'journal', 'audit', 'settings', 'guidance']);
+  const data = record(value, ['schemaVersion', 'sessions', 'intent', 'wakeMarkers', 'checkins', 'journal', 'audit', 'settings', 'guidance', 'profile']);
   if (data.schemaVersion !== 1) invalid();
   const settings = record(data.settings, ['timezone', 'goalBed', 'goalWake', 'theme']);
   zone(settings.timezone);
   for (const goal of [settings.goalBed, settings.goalWake]) if (typeof goal !== 'string' || (goal !== '' && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(goal))) invalid();
   oneOf(settings.theme, ['dark','light']);
+  if (data.profile !== undefined) {
+    const p=record(data.profile,['version','givenName','birthDate','challenges','duration','context','goals','completedAtUtc','onboardingStep']);
+    if(p.version!==1||typeof p.givenName!=='string'||p.givenName.length>80||(p.completedAtUtc!==''&&!p.givenName.trim()))invalid();
+    if(typeof p.birthDate!=='string'||(p.birthDate!==''&&(!/^\d{4}-\d{2}-\d{2}$/.test(p.birthDate)||!Number.isFinite(Date.parse(p.birthDate))||new Date(p.birthDate).toISOString().slice(0,10)!==p.birthDate||p.birthDate>new Date().toISOString().slice(0,10)||p.birthDate<'1900-01-01')))invalid();
+    for(const item of list(p.challenges))oneOf(item,['shifting','falling_asleep','split_sleep','daytime_tired','structure']);
+    for(const item of list(p.goals))oneOf(item,['understand','energy','routine','professional']);
+    if(list(p.challenges).length>5||new Set(list(p.challenges)).size!==list(p.challenges).length||list(p.goals).length>4||new Set(list(p.goals)).size!==list(p.goals).length)invalid();
+    oneOf(p.duration,['recent','months','longer','unspecified']);if(typeof p.context!=='string'||p.context.length>2000)invalid();if(p.completedAtUtc!=='')time(p.completedAtUtc);if(p.onboardingStep!==undefined){number(p.onboardingStep,0,2);if(!Number.isInteger(p.onboardingStep))invalid();}
+  }
   if (data.guidance !== undefined) {
     const g = record(data.guidance, ['windDownMinutes','checkinTime','commitments','feedback']);
     oneOf(String(g.windDownMinutes), ['15','30','60']); number(g.windDownMinutes,15,60);
@@ -44,12 +53,13 @@ export function assertData(value: unknown): asserts value is RhythmData {
   entities(data.wakeMarkers, item => { const v = record(item, ['id','atUtc','intentId']); time(v.atUtc); if (v.intentId !== undefined) text(v.intentId); return v; });
   entities(data.checkins, item => { const v = record(item, ['id','atUtc','energy','sleepiness','sleepSessionId']); time(v.atUtc); number(v.energy,1,5); number(v.sleepiness,1,5); if (!Number.isInteger(v.energy) || !Number.isInteger(v.sleepiness)) invalid(); if (v.sleepSessionId !== undefined) text(v.sleepSessionId); return v; });
   entities(data.journal, item => {
-    const v = record(item, ['id','atUtc','text','sleepSessionId','audio']); time(v.atUtc);
+    const v = record(item, ['id','atUtc','text','sleepSessionId','audio','audioRef']); time(v.atUtc);
     if (typeof v.text !== 'string' || v.text.length > 64000) invalid(); if (v.sleepSessionId !== undefined) text(v.sleepSessionId);
     if (v.audio !== undefined) {
       const audio = record(v.audio, ['mimeType','dataUrl']); text(audio.mimeType,128); text(audio.dataUrl,14000000);
       if (!/^audio\/(webm|mp4|wav|x-wav|mpeg|ogg|aac|flac|x-flac)(?:;[a-z0-9=., "'_-]+)?$/i.test(audio.mimeType) || !audio.dataUrl.startsWith(`data:${audio.mimeType};base64,`) || !/^[A-Za-z0-9+/]*={0,2}$/.test(audio.dataUrl.slice(`data:${audio.mimeType};base64,`.length))) invalid();
     }
+    if(v.audioRef!==undefined){const ref=record(v.audioRef,['path','mimeType','sha256','size']);text(ref.path,256);text(ref.mimeType,128);text(ref.sha256,64);if(!/^[0-9a-f-]{36}\/[0-9a-f]{64}\/[0-9a-f]{64}$/.test(ref.path)||!/^[a-f0-9]{64}$/.test(ref.sha256)||!/^audio\/(webm|mp4|wav|x-wav|mpeg|ogg|aac|flac|x-flac)(?:;[a-z0-9=., "'_-]+)?$/i.test(ref.mimeType))invalid();number(ref.size,1,10000000);}
     return v;
   });
   entities(data.audit, item => { const v = record(item, ['id','atUtc','type','objectIds']); time(v.atUtc); text(v.type); for (const id of list(v.objectIds)) text(id); return v; });

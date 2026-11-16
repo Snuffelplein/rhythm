@@ -7,25 +7,6 @@ import { VoiceComposer } from './ai/voice-composer';
 export function FormError({ error }: {
     error: string;
 }) { return error ? <p className="form-error" role="alert"><AlertCircle size={16}/>{error}</p> : null; }
-export function VaultForm({ existing, onUnlock }: {
-    existing: boolean;
-    onUnlock: (password: string) => Promise<void>;
-}) {
-    const [password, setPassword] = useState(''), [repeat, setRepeat] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
-    async function submit(e: FormEvent) { e.preventDefault(); setError(''); if (!existing && password !== repeat) {
-        setError('De wachtwoorden komen niet overeen.');
-        return;
-    } setBusy(true); try {
-        await onUnlock(password);
-    }
-    catch (e) {
-        setError(e instanceof Error ? e.message : 'Ontgrendelen mislukt.');
-    }
-    finally {
-        setBusy(false);
-    } }
-    return <form onSubmit={submit}><div className="privacy-callout"><LockKeyhole size={22}/><p>Je gegevens worden versleuteld in deze browser bewaard. Dit is je kluiswachtwoord: het blijft op je apparaat en is apart van je accountwachtwoord. Synchronisatie kun je zelf aanzetten bij Meer.</p></div><label>Wachtwoord<input type="password" autoComplete={existing ? 'current-password' : 'new-password'} minLength={existing ? 1 : 12} required value={password} onChange={e => setPassword(e.target.value)} autoFocus/></label>{!existing && <label>Herhaal wachtwoord<input type="password" autoComplete="new-password" minLength={12} required value={repeat} onChange={e => setRepeat(e.target.value)}/></label>}<p className="field-hint">{existing ? 'Ontgrendel om je eigen dagboek te openen. Het vergrendelt na 5 minuten zonder bediening of 1 minuut op de achtergrond. Sla je notities tussendoor op.' : 'Bewaar dit wachtwoord goed. We kunnen het niet herstellen. Wis je browsergegevens, dan verdwijnt ook je dagboek. Exporteer regelmatig een eigen kopie.'}</p><FormError error={error}/><button className="button primary full" disabled={busy}>{busy ? 'Even geduld…' : existing ? 'Ontgrendel mijn dagboek' : 'Start mijn dagboek'}<ArrowRight size={18}/></button></form>;
-}
 export function SessionForm({ session, data, now, onSave, onRemove, onTransform, onCancel, submitLabel = 'Bevestig slaapblok' }: {
     session?: SleepSession;
     data: RhythmData;
@@ -113,7 +94,7 @@ export function JournalForm({ now, onSave, onSkip, submitLabel = 'Bewaar mijn no
     return <form onSubmit={submit}>
         <label>Wat wil je onthouden?<textarea aria-label="Wat wil je onthouden?" autoFocus rows={5} maxLength={10000} value={text} onChange={event => setText(event.target.value)} placeholder="Hoe ging het slapen? Wat speelde er mee? Typ of spreek het in." /></label>
         <VoiceComposer text={text} onText={setText} onAudio={setAudio} onBusy={setProcessing} />
-        {audio && <label className="checkbox-label"><input type="checkbox" checked={keepAudio} onChange={event => setKeepAudio(event.target.checked)} /><span>Opname bij mijn notitie bewaren<small>Alleen na deze keuze wordt audio in je versleutelde dagboek bewaard.</small></span></label>}
+        {audio && <label className="checkbox-label"><input type="checkbox" checked={keepAudio} onChange={event => setKeepAudio(event.target.checked)} /><span>Opname bij mijn notitie bewaren<small>Alleen na deze keuze wordt audio op dit apparaat en in de privéopslag van je account bewaard.</small></span></label>}
         <p className="field-hint">Deze notitie en eventuele audio blijven privé en staan standaard buiten je rapport en exports. Controleer AI-voorstellen voordat je ze toevoegt.</p>
         <FormError error={error} />
         <button className="button primary full" disabled={busy || processing || (!text.trim() && !(audio && keepAudio))}>{busy ? 'Opslaan…' : submitLabel}</button>

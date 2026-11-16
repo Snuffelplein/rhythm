@@ -1,14 +1,16 @@
+import {accountFixture,visualAccount} from './fixtures/account.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 
 const browser = await chromium.launch({channel:'msedge',headless:true});
 const context = await browser.newContext({viewport:{width:1512,height:1100},timezoneId:'Europe/Amsterdam',locale:'nl-NL'});
+await accountFixture(context);
 const page = await context.newPage();
 page.setDefaultTimeout(12000);
 const errors=[];
 page.on('pageerror',e=>errors.push(e.message));
-const base=process.env.RHYTHM_TEST_URL??'http://127.0.0.1:5173';
+const base=process.env.RHYTHM_TEST_URL??'http://127.0.0.1:4178';
 const nav=()=>page.getByRole('navigation',{name:'Hoofdnavigatie'});
 const clickPage=async name=>nav().getByRole('button',{name,exact:true}).click();
 const skipFollowup=async()=>{
@@ -18,23 +20,9 @@ const skipFollowup=async()=>{
 };
 await mkdir('test-results',{recursive:true});
 try {
-  await page.clock.install({time:new Date('2026-11-15T18:00:00Z')});
+  await page.clock.setFixedTime(new Date('2026-11-15T18:00:00Z'));
   await page.goto(base);
-  await page.getByRole('button',{name:'Bekijk de demo',exact:true}).click();
-  await page.getByText('Je bekijkt voorbeeldgegevens.',{exact:false}).waitFor();
-  await page.screenshot({path:'test-results/vandaag-desktop.png',fullPage:true});
-  console.log('Demo rendered');
-  for (const name of ['Mijn slaap','Wekker','Dagboek','Meer','Vandaag']) {
-    await clickPage(name);
-    assert.equal(await page.locator('main h1').count(),1);
-  }
-  await page.getByRole('button',{name:'Demo verlaten',exact:true}).click();
-  await page.getByRole('button',{name:'Start mijn dagboek',exact:true}).click();
-  await page.getByLabel('Wachtwoord',{exact:true}).fill('rhythm-browser-test');
-  await page.getByLabel('Herhaal wachtwoord',{exact:true}).fill('rhythm-browser-test');
-  await page.getByRole('button',{name:'Start mijn dagboek',exact:true}).last().click();
-  await page.getByRole('dialog').waitFor({state:'hidden'});
-  console.log('Vault created');
+  await page.locator('.app-shell').waitFor();
   await page.getByRole('button',{name:'Slaap achteraf toevoegen',exact:true}).click();
   await page.getByLabel('Slaapbegin (schatting)',{exact:true}).fill('2026-11-15T02:30');
   await page.getByLabel('Einde slaapblok',{exact:true}).fill('2026-11-15T05:00');
@@ -84,14 +72,14 @@ try {
   await page.getByRole('group',{name:'Hoe slaperig voel je je?'}).getByRole('button',{name:'4 Erg',exact:true}).click();
   await page.getByRole('button',{name:'Bewaar mijn check-in',exact:true}).click();
   await page.getByRole('dialog').waitFor({state:'hidden'});
-  await page.getByRole('heading',{name:'Maak het vandaag klein.',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'Maak je plan vandaag haalbaar',exact:true}).waitFor();
   console.log('Check-in saved');
   await clickPage('Dagboek');
   await page.getByRole('button',{name:'Notitie schrijven',exact:true}).click();
   await page.getByLabel('Wat wil je onthouden?',{exact:true}).fill('PRIVATE-BROWSER-SENTINEL');
   await page.getByRole('button',{name:'Bewaar mijn notitie',exact:true}).click();
   await page.getByRole('dialog').waitFor({state:'hidden'});
-  assert.ok(!(await page.evaluate(()=>localStorage.getItem('rhythm.vault.v1'))).includes('PRIVATE-BROWSER-SENTINEL'));
+  assert.ok(!(await page.evaluate(()=>JSON.stringify(localStorage))).includes('PRIVATE-BROWSER-SENTINEL'));
   await page.getByRole('button',{name:'Ik lig nu wakker',exact:true}).click();
   await page.locator('.wake-marker').first().waitFor();
   await clickPage('Meer');
@@ -106,7 +94,7 @@ try {
   assert.ok(!exported.includes('FLOW-LINKED-PRIVATE-NOTE'));
   assert.ok(JSON.parse(exported).checkins.some(c=>c.sleepSessionId));
   assert.ok(JSON.parse(exported).sessions.some(s=>s.inBedAtUtc));
-  await page.getByLabel('Vrije dagboeknotities opnemen',{exact:false}).check();
+  await page.getByLabel('Dagboek en persoonlijke context opnemen',{exact:false}).check();
   downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:/JSON-export/}).click();
   downloaded=await downloadPromise;stream=await downloaded.createReadStream();chunks=[];
@@ -114,7 +102,7 @@ try {
   assert.ok(Buffer.concat(chunks).toString().includes('PRIVATE-BROWSER-SENTINEL'));
   assert.ok(JSON.parse(Buffer.concat(chunks).toString()).journal.some(j=>j.sleepSessionId));
   console.log('Export privacy checked');
-  await page.getByLabel('Vrije dagboeknotities opnemen',{exact:false}).uncheck();
+  await page.getByLabel('Dagboek en persoonlijke context opnemen',{exact:false}).uncheck();
   await page.evaluate(()=>{window.print=()=>{};});
   await page.getByRole('button',{name:/PDF-rapport/}).click();
   await page.locator('.print-report').waitFor({state:'attached'});
@@ -126,13 +114,6 @@ try {
   await page.getByRole('button',{name:'Ik ga slapen',exact:true}).click();
   await page.getByText('Je registratie loopt',{exact:true}).waitFor();
   await page.reload();
-  await page.getByRole('button',{name:'Ontgrendel dagboek',exact:true}).click();
-  await page.getByLabel('Wachtwoord',{exact:true}).fill('wrong-password');
-  await page.getByRole('button',{name:'Ontgrendel mijn dagboek',exact:true}).click();
-  await page.getByRole('dialog').getByRole('alert').waitFor();
-  await page.getByLabel('Wachtwoord',{exact:true}).fill('rhythm-browser-test');
-  await page.getByRole('button',{name:'Ontgrendel mijn dagboek',exact:true}).click();
-  await page.getByRole('dialog').waitFor({state:'hidden'});
   await page.getByText('Je registratie loopt',{exact:true}).waitFor();
   assert.match(await page.locator('.stats-grid').innerText(),/8u 00m/);
   await page.setViewportSize({width:390,height:844});
@@ -147,10 +128,6 @@ try {
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
     await context.setOffline(true);
     await page.reload();
-    await page.getByRole('button',{name:'Ontgrendel dagboek',exact:true}).click();
-    await page.getByLabel('Wachtwoord',{exact:true}).fill('rhythm-browser-test');
-    await page.getByRole('button',{name:'Ontgrendel mijn dagboek',exact:true}).click();
-    await page.getByRole('dialog').waitFor({state:'hidden'});
     await page.getByText('Je registratie loopt',{exact:true}).waitFor();
     await page.getByRole('navigation',{name:'Mobiele navigatie'}).getByRole('button',{name:'Dagboek',exact:true}).click();
     await page.getByRole('button',{name:'Notitie schrijven',exact:true}).click();
@@ -161,6 +138,6 @@ try {
     console.log('Production offline reload and encrypted writes checked');
   }
   assert.deepEqual(errors,[]);
-  console.log('Browser checks passed: navigation, demo isolation, encrypted storage, session entry, overlap handling, check-in, diary, awake marker, privacy exports, PDF, wrong password, restart recovery, mobile and theme.');
+  console.log('Browser checks passed: navigation, authenticated offline storage, session entry, overlap handling, check-in, diary, awake marker, privacy exports, PDF, automatic session restore, mobile and theme.');
 } catch(error) { await page.screenshot({path:'test-results/failure.png',fullPage:true});throw error; }
 finally { await browser.close(); }

@@ -1,65 +1,64 @@
 # Rhythm — Vercel en Supabase
 
-## Huidige configuratie
+## Configuratie 0.7.0
 
-- Frontend: React/Vite PWA, Node.js 24, npm workspaces.
-- Vercel: repositoryroot als Root Directory, `npm ci`, dependency-gate en `npm run build`, output `apps/prototype-web/dist`.
-- Supabase Auth: e-mail/wachtwoord met e-mailbevestiging. Lokaal gebruik blijft mogelijk zonder account.
-- Database: `encrypted_vaults`, één versleutelde momentopname per gebruiker, met eigenaars-/sessie-RLS en controle van revisie plus wijzigings-id.
-- De browser bevat uitsluitend publieke projectconfiguratie. Geen secret/service-role key nodig voor de webapp.
-- Vast adres: [Rhythm](https://rhythm-rho-bice.vercel.app/), via de productiebranch `main`. Versie 0.6.0, securityheaders en offline PWA zijn op dit adres gecontroleerd. Echte Auth-mail en iPhone-bezorging blijven afzonderlijke controles.
+- React/Vite PWA, Node.js 24, npm workspaces. Vercel bouwt vanaf de repositoryroot met `npm ci`, de dependency-gate en `npm run build`; output `apps/prototype-web/dist`.
+- Vast adres: [Rhythm](https://rhythm-rho-bice.vercel.app/). De GitHub-integratie publiceert `main`; controleer de broncommit en geleverde versie na iedere push.
+- Supabase Auth met e-mail/wachtwoord, e-mailbevestiging en PKCE. Eén centrale login; geen apart kluiswachtwoord voor nieuw gebruik.
+- `account_data`: één leesbare JSON-momentopname per account, beschermd door eigenaar-/actieve-sessie-RLS, revisie en change-id. `account_revisions` bewaart tien vorige versies. `account_recovery` bewaart tien kopieën bij conflict/herstel.
+- De private Storage-bucket `rhythm-audio` bevat expliciet bewaarde opnamen, maximaal 10 MB per bestand. Paden zijn account/notehash/contenthash; downloads controleren SHA-256 en lengte. Geen publieke of blijvende ondertekende links.
+- De browser bevat alleen publieke projectconfiguratie. Secret/service-role keys horen nooit in een `VITE_` variabele of frontendbestand.
 
-## Publiceren op Vercel
+## Auth instellen en testen
 
-Rond vóór persoonlijk gebruik de voorwaarden in [SECURITY.md](SECURITY.md) af. Gebruik de eerste gecontroleerde preview uitsluitend met synthetische gegevens; de lokale testresultaten bewijzen de uiteindelijke hosting- en Auth-configuratie niet.
+In **Supabase → Authentication → URL Configuration** moeten Site URL en Redirect URL de exacte origin `https://rhythm-rho-bice.vercel.app` toestaan. De client gebruikt `location.origin` voor bevestiging en herstel. De beschikbare tools kunnen deze adminconfiguratie en SMTP-instellingen niet volledig uitlezen; presenteer ze niet als geverifieerd. Gebruik geen brede wildcard voor willekeurige previews.
 
-1. Importeer `Snuffelplein/rhythm` in Vercel. Laat Root Directory op de repositoryroot staan; selecteer niet alleen de app-submap, omdat de gedeelde packages nodig zijn.
+Controleer de e-mailprovider/SMTP, server-side wachtwoordbeleid, rate limits en CAPTCHA-keuze. De registratie-UI vraagt minstens twaalf tekens, maar die clientcontrole vervangt geen serverbeleid. De bestaande waarschuwing over uitgeschakelde leaked-password protection blijft open; de provider biedt die functie op Pro en hoger. Er is geen betaald plan aangezet.
 
-   De huidige 0.6.0-versie met securityfixes en begeleiding is na expliciete toestemming naar `main` gebracht. Het bestaande Rhythm-project publiceert automatisch vanaf die branch. Controleer de broncommit en geleverde appversie voordat je test.
-2. De instellingen komen uit `vercel.json`. Gebruik Node.js 24 en kies één vast productieadres voor persoonlijke registraties.
-3. De bestaande project-URL en publishable key zijn als publieke defaults geconfigureerd. Om een ander Supabase-project te gebruiken stel je `VITE_SUPABASE_URL` en `VITE_SUPABASE_PUBLISHABLE_KEY` in en bouw je opnieuw. Nooit een `service_role` of secret key in een `VITE_` variabele zetten.
-4. Voeg in **Supabase → Authentication → URL Configuration** het exacte productieadres toe als **Site URL** en toegestane **Redirect URL**. Voeg ontwikkeladressen alleen afzonderlijk toe als je daar e-mailflows test. Gebruik geen algemene wildcard naar willekeurige previewdeployments.
+Test echte registratie, bevestiging, login, wachtwoordreset en terugkomst met behoud van accountgegevens. Open de PKCE-mailcallback in dezelfde browsercontext als de aanvraag. Safari en een iPhone-beginscherm-PWA delen hun opslag niet gegarandeerd; dit vraagt een fysieke toesteltest. Een reset herstelt accounttoegang tot nieuwe accountopslag; een vergeten oude kluissleutel blijft niet herstelbaar.
 
-   Voor dit project is dat `https://rhythm-rho-bice.vercel.app`. De client gebruikt deze origin voor e-mailbevestiging en accountherstel. Deze admininstellingen konden niet via de beschikbare tools worden uitgelezen; controleer ze in het dashboard en test echte mails.
-5. Controleer de e-mailprovider/SMTP-configuratie, server-side wachtwoordbeleid en misbruikbeperking (rate limits/CAPTCHA-keuze). Deze admininstellingen zijn niet volledig geverifieerd. Standaard Supabase-mail is beperkt; een echte pilot vraagt gecontroleerde aflevering van bevestigings- en herstelmails. E-mailbevestiging is niet uitgezet om tests makkelijker te maken.
-6. Test op de productieorigin: account maken, ontvangen bevestiging, login, wachtwoordherstel, kluis maken/ontgrendelen, expliciete synchronisatie, tweede apparaat en offline terugkomst.
-7. Voeg juist dit vaste adres op iPhone toe via **Safari → Deel → Zet op beginscherm**, met **Open als webapp** ingeschakeld wanneer zichtbaar.
+## Offline en synchronisatie
 
-Een Git-push is geen bewijs van een Vercel-deployment. Controleer de door Vercel teruggegeven productie-URL en bouwstatus. Preview- en productieadressen hebben aparte browseropslag; ga niet uit van automatische overdracht van lokale logs.
+Na de eerste login/opening wordt een offline kopie in IndexedDB bewaard. De kopie gebruikt AES-GCM met een niet-exporteerbare apparaatsleutel in dezelfde browserorigin; dit is geen bescherming tegen kwaadaardige scripts binnen die origin, noch een extra accountwachtwoord. De gebruiker blijft op dit apparaat aangemeld totdat die uitlogt. Er is geen automatische dagboekvergrendeling meer die naar een schijnbaar leeg startscherm leidt.
 
-Na deployment controleer je het werkelijke previewadres met:
+Bevestigd opslaan betekent dat IndexedDB de transactie heeft voltooid. De duurzame wachtrij bevat pending change-id en remote basis. De geopende app synchroniseert na invoer, reconnect, terugkeer en periodiek. Gesloten iOS-PWA's garanderen geen background sync. Browseropslag wissen of verlies van het apparaat kan nog niet geüploade invoer verwijderen.
+
+Een fout bij de eerste online leesactie is geen leeg account. De app opent dan een foutscherm met opnieuw proberen. Losse nieuwe registraties en niet-botsende wijzigingen worden samengevoegd. Twee verschillende aanpassingen van dezelfde registratie of hetzelfde profiel stoppen; de lokale invoer blijft bewaard en er wordt een herstelkopie aangeboden. Verloren antwoorden en wijzigingen tijdens uploads zijn apart getest.
+
+Uitloggen verwijdert de sessie en zichtbare gegevens, maar behoudt wachtende invoer in de offline cache voor hetzelfde account. Andere accounts krijgen die kopie niet te zien. Opnamen van een ander apparaat worden op aanvraag gecachet. Bij een restore wordt eerst de huidige inhoud naar `account_recovery` gestuurd; nieuwe invoer die tijdens ophalen ontstaat blokkeert vervanging.
+
+Online revisies/herstelpunten zijn aanvullende appkopieën, geen onafhankelijke databaseback-up. De huidige snapshotlimiet is 8 MB JSON; grotere archieven vragen een volgende opslagopzet. Niet-meer-verwezen audiobestanden worden nog niet automatisch gewist, zodat eerdere herstelpunten hun opnamen behouden. Een volledige account-/retentieverwijderingsflow is nog niet gebouwd; beloof die niet.
+
+## Bestaande kluizen
+
+Migratie `20261116015744_account_storage` is toegepast op het geconfigureerde project. Bestaande `encrypted_vaults`, `rhythm.vault.v1` en `rhythm.sync.v1` zijn niet verwijderd of aangepast. De oude encryptie-/pushmigraties blijven onderdeel van de geschiedenis; voer ze niet opnieuw handmatig uit.
+
+Onder **Meer → Mijn account → Herstel & oude registraties** kan een gebruiker oude lokale of online inhoud eenmalig lezen met het oude kluiswachtwoord. De decryptie en eventuele v1-upgrade gebeuren op een geheugenkopie. Een oude accountbinding moet overeenkomen. Registraties worden per ID samengevoegd; afwijkende duplicaten stoppen. Nieuwe profielkeuzes blijven behouden; bestaande eigen dagankers krijgen voorrang en oude feedback/vaste momenten worden meegenomen. Het oorspronkelijke versleutelde bestand blijft onaangeroerd. Dit bewijst niet dat ontbrekende gebruikersgegevens zijn teruggevonden: daarvoor moet de oude kopie nog bestaan in de juiste Safari-/PWA-context.
+
+## Hosting controleren
 
 ```powershell
+npm.cmd test
+npm.cmd run build
+npm.cmd run preview -- --port 4178 --strictPort
+```
+
+In een tweede terminal:
+
+```powershell
+npm.cmd run test:browser
+npm.cmd run test:account
+node tests/account-data-browser.mjs
+npm.cmd run test:flow
+npm.cmd run test:security
+npm.cmd run test:pwa
+npm.cmd run test:visual
+npm.cmd run test:push:browser
 npm.cmd run test:hosted -- https://rhythm-rho-bice.vercel.app
 ```
 
-Deze controle gebruikt een nieuwe, tijdelijke browser met uitsluitend demo-inhoud. Hij toetst HTTPS-redirects, werkelijk geleverde securityheaders, de verwachte appversie, zichtbare begeleiding, scriptblokkade, afgeschermde bron-/privépaden, serviceworkerheaders, manifest/iconen en offline herladen. Bij ingeschakelde Vercel Deployment Protection stopt hij; dat is geen app-testuitslag en geen reden om beveiliging automatisch uit te zetten. Auth-mail en fysieke iPhone/PWA blijven afzonderlijke controles. Het resultaat staat lokaal in `test-results/hosted-preview.json`.
+Accountbrowsers gebruiken de echte Supabase SDK met synthetische HTTP-fixtures; geen echte accounts, mails of meldingen. `tests/account-database.mjs` draait echte lokale Postgres/RLS met platformstubs. `tests/rls-account.sql` kan via een vertrouwde databaseverbinding tegen het echte project worden uitgevoerd; alle synthetische fixtures worden teruggedraaid. Het wijzigt geen echte gebruikersrecords.
 
-## Databasemigraties
+De hosted controle gebruikt een verse browser zonder account of uploads. Die toetst echte headers/CSP, HTTPS, de releaseversie, private bronpaden, manifest/iconen en de offline login-shell. Dit bewijst geen mailaflevering of fysieke iPhone-installatie. Test de accountflow desgewenst aanvullend met alleen onderschepte SDK-fixtures op dezelfde hosting.
 
-De SQL onder `supabase/migrations/` beschrijft de schemawijzigingen. De kluis-/securitymigraties en de drie pushmigraties zijn op het opgegeven project toegepast; voer die niet opnieuw handmatig uit. De pushfunctie en minutencron zijn actief na specifieke gebruikersgoedkeuring. Zie [REMINDERS.md](REMINDERS.md) voor de eenmalige scheduler-tickets en fysieke bezorgcontrole. Bij een nieuw project volg je de migratiegeschiedenis met de vastgezette Supabase CLI.
-
-De beveiliging bestaat uit expliciete tabelrechten, vier RLS-policies op `auth.uid() = user_id`, uitsluiten van anonieme accounts en controle van de revisie en versleutelde envelop. Er is geen publieke geprivilegieerde app-RPC. Een afgeschermde functie in `rhythm_private` controleert uitsluitend of de eigen Auth-sessie nog bestaat en niet verlopen is; deze heeft daarvoor een vast leeg search_path en beperkte EXECUTE-rechten. De administratieve bootstrap-eventtrigger heeft geen publieke uitvoerrechten.
-
-`tests/rls-vault.sql` is een vertrouwde SQL-test, geen browserrequest. De test maakt tijdelijke synthetische Auth-fixtures binnen een transactie, simuleert JWT-rollen, controleert isolatie en draait alles terug. Voer dit alleen uit via een vertrouwde databaseverbinding.
-
-## Versleuteling en herstel
-
-Het kluiswachtwoord leidt lokaal een AES-GCM-sleutel af. De backend krijgt salt, IV, ciphertext en revisiemetadata, geen leesbare dagboekinhoud of kluiswachtwoord. De server verwerkt wel je accountgegevens en verbindingsmetadata. Audio wordt niet gesynchroniseerd.
-
-PKCE vereist dat de e-mailcallback in dezelfde browsercontext wordt geopend als de aanvraag. Verifieer dit ook vanuit de iPhone-PWA; ga niet uit van gedeelde Safari-/PWA-opslag. Een accountreset herstelt geen vergeten kluiswachtwoord. Bewaar het kluiswachtwoord zelf. Een recente cloudkopie kan met dit wachtwoord op een ander apparaat worden opgehaald. Conflicten stoppen de upload; er is geen automatische samenvoeging. Exporteer eventuele lokale wijzigingen voordat je de lokale kluis door een cloudkopie vervangt. De limiet voor één ciphertext is circa 2 miljoen base64tekens; grote archieven vragen later een andere opslagopzet.
-
-Cloudkopie verwijderen stopt synchronisatie op dit apparaat en laat de lokale kluis staan. Een ander nog gekoppeld apparaat kan later opnieuw uploaden. Lokale gegevens verwijderen verwijdert de cloudkopie niet. Accountverwijdering vanuit de app is nog een vervolgstap.
-
-## Wat de tests bewijzen
-
-- Unit-/integratietests: echte browsercryptografie, geen leesbare inhoud of audio in de cloudkopie, offline hervatten, idempotente herhaling, conflicten, accountbinding en race-/tabcontroles.
-- Cloudbrowser: echte Supabase JS-client met gecontroleerde HTTP-fixtures voor registratie, login/logout, opt-in, accountisolatie en herstel op een tweede apparaat. Geen echte e-mail verzonden.
-- Echt Supabase-project: Auth-instellingen en publieke bereikbaarheid gecontroleerd; RLS-/revisietests met teruggedraaide fixtures en Security Advisor uitgevoerd. Dit vervangt geen echte e-mail-/toesteltest op het productieadres.
-- Bestaande browser-/PWA-tests controleren lokale en offline flows. Nederlandse modelkwaliteit en geheugen/accu op fysieke iPhones blijven afzonderlijke validatie.
-
-## Privébestanden en afhankelijkheden
-
-`.gitignore` en `.vercelignore` sluiten de volledige lokale `docs/`-vault, certificaten, `.env`-bestanden en testprofielen uit. Persoonlijke logs worden niet als repositorybestand opgeslagen. De publieke deploy bevat uitsluitend de gebouwde app.
-
-De eerder gevonden sharp-advisories zijn verholpen met een exact vastgezette override naar 0.35.5. De laatste npm-scan meldde nul advisories. Vercel draait nu `npm run security:deps` voor de build en stopt bij bekende kwetsbaarheden vanaf low. Zie [SECURITY.md](SECURITY.md) voor beveiligingsbasis en bewijsgrenzen.
+De optionele pushbackend en eenmalige croncapabilities staan in [REMINDERS.md](REMINDERS.md). Privacy-/beveiligingsgrenzen staan in [SECURITY.md](SECURITY.md). De volledige privé-vault `docs/`, `.env`, certificaten en testprofielen blijven buiten Git en Vercel.

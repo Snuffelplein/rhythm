@@ -1,6 +1,6 @@
 {
   "name": "rhythm",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -31,7 +31,8 @@
     "test:push": "node tests/push-database.mjs && node tests/push-protocol.mjs",
     "test:push:browser": "node tests/push-browser.mjs",
     "test:push:hosted": "node tests/push-hosted.mjs",
-    "security:deps": "npm audit --audit-level=low"
+    "security:deps": "npm audit --audit-level=low",
+    "test:account": "node tests/account-database.mjs && node tests/cloud-browser.mjs && node tests/account-data-browser.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

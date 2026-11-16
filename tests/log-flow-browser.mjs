@@ -1,16 +1,18 @@
+import {accountFixture,visualAccount} from './fixtures/account.mjs';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const context=await browser.newContext({viewport:{width:390,height:844},locale:'nl-NL',timezoneId:'Europe/Amsterdam'});
+await accountFixture(context);
 const page=await context.newPage();page.setDefaultTimeout(15000);
 const external=[];page.on('request',request=>{const url=new URL(request.url());if(/^https?:$/.test(url.protocol)&&!url.hostname.match(/^(127\.0\.0\.1|localhost)$/))external.push(request.url());});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
 await mkdir('test-results',{recursive:true});
 try{
-  await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:5173');
-  await page.getByRole('button',{name:'Bekijk de demo',exact:true}).click();
+  await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:4178');
+  await page.locator('.app-shell').waitFor();
   const nav=page.getByRole('navigation',{name:'Mobiele navigatie'});
   await nav.getByRole('button',{name:'Slaap',exact:true}).click();
   const before=await page.locator('.session-row').count();
@@ -46,7 +48,7 @@ try{
   await page.evaluate(()=>{Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true});});
   await page.getByRole('button',{name:'Download en laad Gemma',exact:true}).click();
   await page.getByText(/Gemma heeft WebGPU nodig/).waitFor();
-  assert.deepEqual(external,[],'No models or personal data may be fetched/sent before an explicit supported activation');
+  assert.deepEqual(external.filter(url=>!url.includes('.supabase.co/')),[],'AI models must not activate without opt-in');
   assert.deepEqual(errors,[]);
   console.log('Log flow mobile checks passed: persistence after close, skipped steps, microphone denied fallback, audio opt-in, model controls, no automatic external requests, unsupported GPU.');
 }catch(error){await page.screenshot({path:'test-results/logflow-failure.png',fullPage:true});throw error;}

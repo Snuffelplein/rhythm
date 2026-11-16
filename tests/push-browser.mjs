@@ -1,3 +1,4 @@
+import {accountFixture} from './fixtures/account.mjs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { generateVAPIDKeys } from 'web-push';
@@ -8,6 +9,7 @@ const session={access_token:token,refresh_token:'push-test-refresh',token_type:'
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try {
  const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'});
+ await accountFixture(context);
  const requests=[];let device=null;
  await context.addInitScript(({publicKey})=>{
    let subscribed=false;window.pushPermissionRequests=0;
@@ -29,16 +31,15 @@ try {
      if(req.method()==='DELETE'){device=null;return respond([]);}
      if(body.schedule)assert.ok(body.schedule.every(s=>Object.keys(s).sort().join(',')===(s.kind==='winddown'?'anchorTime,kind,leadMinutes,time':'kind,time')));
      assert.ok(!JSON.stringify(body).includes('guidance-browser-key'));
-     device={id:'20000000-0000-4000-8000-000000000001',...device,...body,last_status:'ready',last_sent_at:null};
+     device={id:'20000000-0000-4000-8000-000000000001',...device,...body,session_id:JSON.parse(Buffer.from(req.headers().authorization.split('.')[1],'base64url').toString()).session_id,last_status:'ready',last_sent_at:null};
      return respond(req.headers().prefer?.includes('return=representation')?device:null,req.method()==='POST'?201:200);
    }
-   throw new Error('Unexpected route '+url.pathname);
+   return route.fallback();
  });
  const page=await context.newPage();page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:4178');
  const nav=()=>page.getByRole('navigation',{name:'Mobiele navigatie'});
- await nav().getByRole('button',{name:'Meer',exact:true}).click();await page.getByLabel('E-mailadres',{exact:true}).fill(user.email);await page.getByLabel('Accountwachtwoord',{exact:true}).fill('account-push-fixture');await page.getByRole('button',{name:'Log in op mijn account',exact:true}).click();await page.getByText(user.email,{exact:true}).waitFor();
- await page.getByRole('button',{name:'Start mijn dagboek',exact:true}).click();await page.getByLabel('Wachtwoord',{exact:true}).fill('guidance-browser-key');await page.getByLabel('Herhaal wachtwoord',{exact:true}).fill('guidance-browser-key');await page.getByRole('dialog').getByRole('button',{name:'Start mijn dagboek',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});
+ await page.locator('.app-shell').waitFor();
  await nav().getByRole('button',{name:'Wekker',exact:true}).click();await page.getByLabel('Gewenst naar bed',{exact:true}).fill('23:00');await page.getByRole('button',{name:'Bewaar mijn dagankers',exact:true}).click();
  const panel=page.getByRole('region',{name:'Pushherinneringen'}),enable=()=>panel.getByRole('button',{name:'Zet herinneringen aan',exact:true});
  await enable().waitFor();assert.equal(await enable().isDisabled(),true);assert.equal(await page.evaluate(()=>window.pushPermissionRequests),0);assert.equal(requests.filter(r=>r.path.endsWith('/push_devices')&&r.method==='POST').length,0);
