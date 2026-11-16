@@ -80,6 +80,16 @@ try {
   for (const url of ['/manifest.webmanifest', ...icons.map(icon => icon.src)]) {
     assert.equal(await page.evaluate(async src => (await fetch(src)).status, url), 200, `${url} must work offline`);
   }
+  await page.getByRole('navigation',{name:'Hoofdnavigatie'}).getByRole('button',{name:'Meer',exact:true}).click();
+  await page.getByRole('button',{name:'Uitloggen',exact:true}).click();
+  await page.getByRole('heading',{name:'Welkom terug',exact:true}).waitFor();
+  await page.evaluate(()=>{document.documentElement.style.setProperty('--safe-left','47px');document.documentElement.style.setProperty('--safe-right','47px');});
+  let brand=await page.locator('.entry-brand').boundingBox();
+  assert.ok(brand.x>=47,'Login must respect landscape notch');
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{document.documentElement.style.setProperty('--safe-top','47px');document.documentElement.style.setProperty('--safe-left','0px');document.documentElement.style.setProperty('--safe-right','0px');});
+  brand=await page.locator('.entry-brand').boundingBox();assert.ok(brand.y>=47,'Login must stay below status bar: '+JSON.stringify({brand,layout:await page.locator('.account-entry').evaluate(e=>({top:getComputedStyle(e).paddingTop,scroll:scrollY}))}));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   assert.deepEqual(errors, []);
   console.log('PWA checks passed: manifest, browser installability, PNG icons, iPhone help, simulated safe areas, offline shell and offline install assets. Physical iPhone installation remains device QA.');
 } finally {
