@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {appVersion} from './version';
 import {EnergyPicker} from './energy-picker';
+import {dayScene} from './day-scene';
 import { Activity, ArrowDownToLine, ArrowRight, BedDouble, BookOpen, CalendarDays, Check, ChevronRight, Clock3, FileText, Fingerprint, Heart, Home, LockKeyhole, Menu, Moon, MoreHorizontal, Plus, Settings2, ShieldCheck, Sparkles, Sun, Sunrise, Watch, Waves, X, Zap } from 'lucide-react';
 import { type RhythmData, type SleepSession } from '../../../packages/domain/src/index';
 import { dayRange, daysEnding, durationLabel, overlap, sessionMinutes, totalSleep, toLocal, validateSession } from '../../../packages/rhythm-engine/src/index';
@@ -35,12 +36,24 @@ export function App({account,onEditProfile}:{account:AccountController;onEditPro
     const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const writeLock = useRef(false),editingBase=useRef<RhythmData>(data);
     const tz = data.settings.timezone;
+    const scene = dayScene(now, tz);
     useEffect(()=>()=>releaseModels(),[]);
-    useEffect(() => { const timer = setInterval(() => setNow(new Date().toISOString()), 30000); return () => clearInterval(timer); }, []);
+    useEffect(() => {
+        let timer: ReturnType<typeof setInterval> | undefined;
+        const update = () => {
+            clearInterval(timer);
+            document.documentElement.dataset.pageVisibility = document.hidden ? 'hidden' : 'visible';
+            if (!document.hidden) {
+                setNow(new Date().toISOString());
+                timer = setInterval(() => setNow(new Date().toISOString()), 60000);
+            }
+        };
+        update(); document.addEventListener('visibilitychange', update);
+        return () => { clearInterval(timer); document.removeEventListener('visibilitychange', update); };
+    }, []);
     useEffect(() => { document.documentElement.dataset.theme = data.settings.theme; }, [data.settings.theme]);
     useEffect(() => { const open = (event: MessageEvent) => { if (event.data?.type === 'rhythm-open-plan') setOpenPlan(true); }; navigator.serviceWorker?.addEventListener('message', open); return () => navigator.serviceWorker?.removeEventListener('message', open); }, []);
     useEffect(() => { if (openPlan && ready) { setPage('alarm'); setOpenPlan(false); if (new URLSearchParams(location.search).get('open') === 'plan') history.replaceState(null, '', location.pathname + location.hash); } }, [openPlan, ready]);
-    useEffect(() => { const update = () => { document.documentElement.dataset.pageVisibility = document.hidden ? 'hidden' : 'visible'; }; update(); document.addEventListener('visibilitychange', update); return () => document.removeEventListener('visibilitychange', update); }, []);
     useEffect(() => { if (!report)
         return; const timer = setTimeout(() => window.print(), 120); return () => clearTimeout(timer); }, [report]);
     useEffect(() => { const close = () => setReport(false); window.addEventListener('afterprint', close); return () => window.removeEventListener('afterprint', close); }, []);
@@ -69,8 +82,8 @@ export function App({account,onEditProfile}:{account:AccountController;onEditPro
       {account.error&&<div className="error-banner" role="alert"><span>{account.error}</span><button className="text-button" onClick={()=>void account.syncNow()}>Opnieuw proberen</button></div>}
       {error && <div className="error-banner" role="alert">{error}<button className="icon-button" aria-label="Melding sluiten" onClick={() => setError('')}><X size={16}/></button></div>}
       {page === 'today' && <div className="dashboard-grid"><section className="primary-column"><section className={`hero-card rhythm-hero ${data.intent ? 'tracking' : ''}`}>
-          <Landscape tone={data.intent ? 'night' : 'dawn'} />
-          <RhythmRing value={data.intent ? timeLabel(data.intent.startedAtUtc, tz) : recent.length ? durationLabel(total.minutes) : '—'} label={data.intent ? 'Naar bed sinds' : 'Slaap in de laatste 24 uur'} active={Boolean(data.intent)} dayFlags={days.map(date => data.sessions.some(session => overlap(session, dayRange(date, tz))))} onOpen={() => setPage('sleep')} />
+          <Landscape scene={scene} />
+          <RhythmRing night={scene.hour < 6 || scene.hour >= 18} value={data.intent ? timeLabel(data.intent.startedAtUtc, tz) : recent.length ? durationLabel(total.minutes) : '—'} label={data.intent ? 'Naar bed sinds' : 'Slaap in de laatste 24 uur'} active={Boolean(data.intent)} dayFlags={days.map(date => data.sessions.some(session => overlap(session, dayRange(date, tz))))} onOpen={() => setPage('sleep')} />
           <div className="hero-content"><span className="hero-kicker"><span className={data.intent ? 'status-pulse' : ''} />{data.intent ? 'Je registratie loopt' : 'Ieder slaapblok vertelt iets'}</span>
           <h2>{data.intent ? <>Een moment<br />voor rust.</> : <>Je ritme begrijpen.<br />Je dag terugvinden.</>}</h2>
           <p>{data.intent ? 'Naar bed gaan is vastgelegd. Bevestig na afloop wanneer je ongeveer sliep.' : 'Ook als je slaap verschuift. Hier krijgt jouw hele etmaal een plek.'}</p>
