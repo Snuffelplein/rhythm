@@ -18,12 +18,12 @@ export function GuidancePanel({data,now,compact=false,saving,onSave,onConfigure,
       await onSave(audit({...data,guidance:{...g,feedback:[...g.feedback.filter(item=>item.eventId!==event.id),f]}},'guidance_feedback',[f.id],f.atUtc));setSelected(null);
     } catch(e){setError(e instanceof Error?e.message:'Je reactie kon niet worden bewaard.');}finally{setBusy(false);}
   }
-  return <section className="panel guidance-panel" aria-label="Persoonlijke begeleiding">
-    <div className="section-heading"><div><span className="eyebrow"><Compass size={15}/> Jouw volgende stap</span><h2>Een haalbaar plan voor jou</h2></div>{compact&&<button className="text-button" onClick={onConfigure}>Mijn plan <ArrowRight size={16}/></button>}</div>
+  return <section className="panel guidance-panel" aria-label="Dagankers en routine">
+    <div className="section-heading"><div><span className="eyebrow"><Compass size={15}/> Jouw volgende stap</span><h2>Jouw dagankers en routine</h2></div>{compact&&<button className="text-button" onClick={onConfigure}>Mijn routine <ArrowRight size={16}/></button>}</div>
     <p className="muted">Jouw gekozen tijden en recente registraties geven richting. Je mag je plan altijd aanpassen.</p>
     {data.intent&&<div className="notice"><Moon size={20}/><span>Er loopt een rustmoment. Je hoeft nu geen dagplan af te werken. Leg na afloop vast wat er werkelijk gebeurde.</span></div>}
     <div className="guidance-layout"><div className="plan-timeline">
-      {!visible.length&&<div className="plan-empty"><p>{events.length?'Je hebt op alle zichtbare momenten gereageerd.':'Kies je dagstart, bedtijd of een vast moment om je plan te vullen.'}</p><button className="button secondary" onClick={onConfigure}>Mijn plan aanpassen</button></div>}
+      {!visible.length&&<div className="plan-empty"><p>{events.length?'Je hebt op alle zichtbare momenten gereageerd.':'Kies je dagstart, bedtijd of een vast moment om je plan te vullen.'}</p><button className="button secondary" onClick={onConfigure}>Mijn routine aanpassen</button></div>}
       {visible.map(event=><article className={`plan-event ${event.outcome?'responded':''}`} key={event.id}>
         <div className="plan-time"><strong>{timeLabel(event.atUtc,data.settings.timezone)}</strong><small>{dateLabel(event.atUtc,data.settings.timezone)}</small></div>
         <div className="plan-content"><h3>{event.label}</h3><details className="plan-why"><summary>Waarom dit moment?</summary><p>{event.explanation}</p></details>
@@ -33,7 +33,7 @@ export function GuidancePanel({data,now,compact=false,saving,onSave,onConfigure,
     </div><div className="guidance-insights">{insights.slice(0,compact?2:4).map(insight=><article className="guidance-insight" key={insight.id}>
       <span className="inline-label"><Sparkles size={16}/> Gebaseerd op jouw gegevens</span><h3>{insight.title}</h3><p>{insight.text}</p>
       <details><summary>Waarom zie ik dit? <ChevronDown size={15}/></summary><p>{insight.source}</p><p>Zelfrapportage geeft context, geen diagnose of bewezen beste slaaptijd.</p></details>
-      <button className="text-button" onClick={insight.action==='settings'?onConfigure:insight.action==='checkin'?onCheckin:onReview}>{insight.action==='settings'?'Mijn plan aanpassen':insight.action==='checkin'?'Hoe gaat het nu?':'Bekijk mijn registraties'}<ArrowRight size={15}/></button>
+      <button className="text-button" onClick={insight.action==='settings'?onConfigure:insight.action==='checkin'?onCheckin:onReview}>{insight.action==='settings'?'Mijn routine aanpassen':insight.action==='checkin'?'Hoe gaat het nu?':'Bekijk mijn registraties'}<ArrowRight size={15}/></button>
     </article>)}</div></div>
     <FormError error={selected?'':error}/>
     {!compact&&<GuidanceSettings data={data} saving={saving} onSave={onSave}/>}

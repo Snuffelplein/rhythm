@@ -9,9 +9,9 @@ try {
 const page=await context.newPage();page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(process.env.RHYTHM_TEST_URL??'http://127.0.0.1:4178');
   await page.locator('.app-shell').waitFor();
-  const guidance=()=>page.getByRole('region',{name:'Persoonlijke begeleiding'});
-  await guidance().getByRole('heading',{name:'Een haalbaar plan voor jou'}).waitFor();
-  await guidance().getByRole('button',{name:'Mijn plan',exact:true}).click();
+  const guidance=()=>page.getByRole('region',{name:'Dagankers en routine'});
+  await guidance().getByRole('heading',{name:'Jouw dagankers en routine'}).waitFor();
+  await guidance().getByRole('button',{name:'Mijn routine',exact:true}).click();
   await page.getByLabel('Gewenste dagstart',{exact:true}).fill('07:30');await page.getByLabel('Gewenst naar bed',{exact:true}).fill('23:00');await page.getByRole('button',{name:'Bewaar mijn dagankers',exact:true}).click();
   await guidance().locator('.plan-event').first().waitFor();
   await guidance().getByRole('button',{name:'Lukt niet',exact:true}).first().click();await page.getByLabel('Wat speelt er?').selectOption('not_sleepy');await page.getByRole('button',{name:'Neem dit mee in mijn plan',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});
