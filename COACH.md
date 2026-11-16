@@ -1,4 +1,6 @@
-# Persoonlijke begeleiding (0.8.0)
+# Persoonlijke begeleiding (0.8.3)
+
+De aangescherpte [coachrichtlijnen](COACH-GUIDELINES.md) leggen nadruk op direct bruikbare hulp, gesprekscontinuïteit en relevante grenzen. Instructies en bronkennis zijn geversioneerd; dezelfde goedkope modelkeuze en expliciete planbevestiging blijven gelden.
 
 Open **Vandaag → Help me met vandaag**. Gesprek, Mijn plan en Geheugen gebruiken hetzelfde account als de rest van de app. Zonder online toestemming kun je lokaal schrijven en eigen doelen/voorkeuren bewaren. De vaste lokale gespreksstarter is herkenbaar gelabeld en is geen taalmodelantwoord. Whisper Base transcribeert Nederlands lokaal; Gemma 4 E2B maakt lokaal een te controleren samenvattingsconcept. Zij activeren geen plannen.
 
@@ -18,7 +20,7 @@ De UI-onafhankelijke `packages/coaching` selecteert profiel, eigen ankers, maxim
 
 De server leest de gesynchroniseerde account-snapshot met de gebruikers-JWT en RLS. De browser stuurt alleen aanvraag-id en verwachte bronvingerafdruk; extra context wordt geweigerd. De functie controleert een actieve Auth-sessie en leest na generatie opnieuw om wijzigingen in toestemming, bronnen of gesprekken te herkennen. GPT heeft geen tools of schrijfrechten.
 
-Structured Outputs en runtimevalidatie controleren vorm, bronverwijzingen, exacte claimwaarden, toegelaten stappen en gebruikersgekozen tijden. Vrije antwoordtekst mag geen cijfers bevatten; controleerbare getallen staan in de bronweergave. De inhoudscontrole weigert onder meer behandel-/doserings-/slaaprestrictievoorstellen. Dit bewijst geen semantische waarheid of medische veiligheid: verkeerde interpretaties en foutpositieve afwijzingen blijven mogelijk. De coach bepaalt geen diagnose of optimale slaap-/wektijden.
+Structured Outputs en runtimevalidatie controleren vorm, bronverwijzingen, exacte claimwaarden, toegelaten stappen en gebruikersgekozen tijden. Persoonlijke cijfers/tijden in antwoordtekst vragen een exacte bronclaim; onbekende getallen worden geweigerd. Gewone praktische steun en het begrensd bespreken van een onderwerp worden onderscheiden van het voorschrijven van diagnoses, doseringen en slaapbehandelingen. Dit bewijst geen semantische waarheid of medische veiligheid: verkeerde interpretaties en foutpositieve afwijzingen blijven mogelijk. De coach bepaalt geen diagnose of optimale slaap-/wektijden.
 
 ## Plan en regie
 

@@ -2,7 +2,7 @@ import {createClient} from '@supabase/supabase-js';
 import {generateCoachAnswer,type CoachEnvironment} from './generate';
 import {syntheticCoachProbe} from './probe';
 import {assertData,type RhythmData} from '../../../packages/domain/src/index';
-import {buildCoachContext,digest,currentCoaching} from '../../../packages/coaching/src/core';
+import {buildCoachContext,digest,currentCoaching,COACH_POLICY_VERSION} from '../../../packages/coaching/src/core';
 export type {CoachEnvironment} from './generate';
 export function createCoachHandler(env:CoachEnvironment,network:typeof fetch=fetch){
  const url=env.get('SUPABASE_URL')!,service=env.get('SUPABASE_SERVICE_ROLE_KEY')!,key=env.get('SUPABASE_ANON_KEY')??service;
@@ -37,7 +37,7 @@ export function createCoachHandler(env:CoachEnvironment,network:typeof fetch=fet
    if(!message)return reply({error:'Synchroniseer dit bericht eerst met je account.'},409);
    const context=await buildCoachContext(data,message.id,new Date().toISOString());
    if(context.stamp!==input.expectedStamp)return reply({error:'Je gegevens zijn veranderd. Haal de actuele versie op en probeer opnieuw.'},409);
-   const fingerprint=await digest({stamp:context.stamp,requestId:message.id,threadId:message.threadId,text:message.text});
+   const fingerprint=await digest({policyVersion:COACH_POLICY_VERSION,stamp:context.stamp,requestId:message.id,threadId:message.threadId,text:message.text});
    reservation={user_id:user.id,id:message.id,thread_id:message.threadId,fingerprint};
    const job=await dispatch('reserve',reservation);
    if(job.state==='done')return reply(job.result);
