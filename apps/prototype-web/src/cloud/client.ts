@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import {authLanding} from '../account/auth-landing';
 import { assertEnvelope } from '../../../../packages/storage/src/index';
 import type { RemoteVault, RemoteVaultStore } from '../../../../packages/storage/src/cloud-sync';
 
@@ -9,7 +10,7 @@ let instance: SupabaseClient | null = null;
 export function cloudClient(): SupabaseClient | null {
   if (!supabaseUrl || !supabasePublishableKey) return null;
   if (!instance) instance = createClient(supabaseUrl, supabasePublishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'rhythm.auth.v1' },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !authLanding?.managed, flowType: 'pkce', storageKey: 'rhythm.auth.v1' },
   });
   return instance;
 }

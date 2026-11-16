@@ -13,13 +13,15 @@ Versie 0.8.0 voegt de optionele servercoach en persoonlijke plannen toe. Zie [CO
 
 ## Auth instellen en testen
 
-In **Supabase → Authentication → URL Configuration** moeten Site URL en Redirect URL de exacte origin `https://rhythm-rho-bice.vercel.app` toestaan. De client gebruikt `location.origin` voor bevestiging en herstel. De beschikbare tools kunnen deze adminconfiguratie en SMTP-instellingen niet volledig uitlezen; presenteer ze niet als geverifieerd. Gebruik geen brede wildcard voor willekeurige previews.
+In **Supabase → Authentication → URL Configuration** moeten Site URL en Redirect URL de exacte origin `https://rhythm-rho-bice.vercel.app` toestaan. Bevestiging gebruikt de huidige origin; herstel gebruikt vanaf 0.8.1 `https://rhythm-rho-bice.vercel.app/?auth=recovery`. Dit blijft op dezelfde origin en vraagt geen nieuw serverpad of brede wildcard. De beschikbare tools kunnen de Auth-beheerconfiguratie en SMTP niet volledig uitlezen; presenteer ze niet als geverifieerd.
 
 Bij een herstelmail naar localhost: controleer zowel Site URL als toegelaten Redirect URLs en eventuele aangepaste e-mailtemplates. Die moeten de bevestigingslink en juiste redirect respecteren. Vraag na aanpassen een nieuwe mail aan vanuit het vaste appadres; reeds verzonden links veranderen niet. De projectbeheerder heeft op 16 november 2026 bevestigd dat Site URL en Redirect URLs zijn bijgewerkt. Het echte mailresultaat blijft een aparte controle. De SDK-browsertest controleert daarnaast de verzonden `redirect_to`, ook op de productieorigin.
 
 Controleer de e-mailprovider/SMTP, server-side wachtwoordbeleid, rate limits en CAPTCHA-keuze. De registratie-UI vraagt minstens twaalf tekens, maar die clientcontrole vervangt geen serverbeleid. De bestaande waarschuwing over uitgeschakelde leaked-password protection blijft open; de provider biedt die functie op Pro en hoger. Er is geen betaald plan aangezet.
 
 Test echte registratie, bevestiging, login, wachtwoordreset en terugkomst met behoud van accountgegevens. Open de PKCE-mailcallback in dezelfde browsercontext als de aanvraag. Safari en een iPhone-beginscherm-PWA delen hun opslag niet gegarandeerd; dit vraagt een fysieke toesteltest. Een reset herstelt accounttoegang tot nieuwe accountopslag; een vergeten oude kluissleutel blijft niet herstelbaar.
+
+De app verwerkt herstel expliciet vóór het openen van accountgegevens. Nieuwe en bestaande PKCE-codecallbacks, oudere tokenfragmenten en recovery-tokenhashlinks worden door Supabase Auth gecontroleerd. Alleen de routeparameter geeft geen toegang tot het wachtwoordformulier. Herladen hervat een bevestigde reset met een kortlevende marker in tabopslag, gebonden aan gebruiker en sessie-id; de marker bevat geen tokens of wachtwoord. Verlopen/ongeldige links en ontbrekende PKCE-browserbewijzen geven een duidelijke nieuwe-mailflow. Callbackcredentials worden uit de adresbalk verwijderd. De actieve-sessiecontrole en wachtwoordmutatie gebruiken de vastgelegde herstel-JWT zodat een accountwissel in een andere tab geen ander account wijzigt. Dit is getest met `npm.cmd run test:recovery` en de echte SDK met uitsluitend synthetische HTTP-fixtures; er zijn geen echte herstelmails verstuurd.
 
 ## Offline en synchronisatie
 
