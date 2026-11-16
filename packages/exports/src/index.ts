@@ -1,7 +1,7 @@
 import type { RhythmData } from '../../domain/src/index';
 import { ENGINE_VERSION, sessionMinutes } from '../../rhythm-engine/src/index';
 export function exportJson(data: RhythmData, includeJournal = false): string {
-    return JSON.stringify({ ...data, profile: includeJournal ? data.profile : undefined, guidance: includeJournal ? data.guidance : undefined, engineVersion: ENGINE_VERSION, generatedAtUtc: new Date().toISOString(), privacy: { journalIncluded: includeJournal }, journal: includeJournal ? data.journal : [] }, null, 2);
+    return JSON.stringify({ ...data, coaching:includeJournal?data.coaching:undefined, profile: includeJournal ? data.profile : undefined, guidance: includeJournal ? data.guidance : undefined, engineVersion: ENGINE_VERSION, generatedAtUtc: new Date().toISOString(), privacy: { journalIncluded: includeJournal }, journal: includeJournal ? data.journal : [] }, null, 2);
 }
 export function csvCell(value: string | number): string {
     const text = String(value), safe = /^[\s]*[=+@-]/.test(text) ? `'${text}` : text;

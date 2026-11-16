@@ -1,4 +1,5 @@
 import type { RhythmData } from './index';
+import { assertCoaching } from '../../coaching/src/validation';
 
 const invalid = (): never => { throw new Error('Ongeldige dagboekgegevens. De opslag is niet gewijzigd.'); };
 function record(value: unknown, keys: string[]): Record<string, unknown> {
@@ -17,8 +18,9 @@ function entities(value: unknown, validate: (item: unknown) => Record<string, un
   for (const item of list(value)) { const v = validate(item); text(v.id); if (ids.has(v.id)) invalid(); ids.add(v.id); }
 }
 export function assertData(value: unknown): asserts value is RhythmData {
-  const data = record(value, ['schemaVersion', 'sessions', 'intent', 'wakeMarkers', 'checkins', 'journal', 'audit', 'settings', 'guidance', 'profile']);
+  const data = record(value, ['schemaVersion', 'sessions', 'intent', 'wakeMarkers', 'checkins', 'journal', 'audit', 'settings', 'guidance', 'profile','coaching']);
   if (data.schemaVersion !== 1) invalid();
+  if(data.coaching!==undefined)assertCoaching(data.coaching);
   const settings = record(data.settings, ['timezone', 'goalBed', 'goalWake', 'theme']);
   zone(settings.timezone);
   for (const goal of [settings.goalBed, settings.goalWake]) if (typeof goal !== 'string' || (goal !== '' && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(goal))) invalid();

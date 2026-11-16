@@ -79,6 +79,7 @@ export interface GuidancePreferences {
     feedback: GuidanceFeedback[];
 }
 export interface RhythmData {
+    coaching?: import('../../coaching/src/types').CoachingData;
     schemaVersion: 1;
     sessions: SleepSession[];
     intent: SleepIntent | null;

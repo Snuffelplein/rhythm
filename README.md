@@ -2,6 +2,8 @@
 
 Een slaap- en ritmedagboek met handmatige registratie, energiecheck-ins, een gesproken dagboek en professionele exports. React/Vite-webapp met een gedeelde TypeScript-kern voor latere native integraties.
 
+Vanaf 0.8.0: **Vandaag → Help me met vandaag** biedt gesprek, eigen bevestigd geheugen en versieerbare persoonlijke plannen. GPT-6 Luna werkt na expliciete toestemming via de server; Whisper en Gemma 4 E2B verwerken lokaal. Een voorstel vraagt jouw bevestiging. Offline schrijven en automatische accountsync blijven beschikbaar. Gebruik, kostenbegrenzing, broncontrole en retentie staan in [COACH.md](COACH.md).
+
 ## Starten
 
 Node.js 24 is vereist. Installeer de pakketten en start de ontwikkelserver:

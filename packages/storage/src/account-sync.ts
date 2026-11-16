@@ -1,5 +1,6 @@
 import { assertData, emptyData, type RhythmData } from '../../domain/src/index';
 import { CacheChanged, type AccountCache, type AccountSnapshot } from './account-cache';
+import { cleanCoaching,emptyCoaching } from '../../coaching/src/types';
 
 export interface AccountRemoteRow {data:RhythmData;revision:number;changeId:string;updatedAt:string}
 export interface AccountRemote {
@@ -22,7 +23,22 @@ export function mergeAccountData(base:RhythmData,local:RhythmData,remote:RhythmD
   if(guidance===null&&local.guidance&&remote.guidance){const b=base.guidance;guidance={windDownMinutes:choose(b?.windDownMinutes,local.guidance.windDownMinutes,remote.guidance.windDownMinutes)!,checkinTime:choose(b?.checkinTime,local.guidance.checkinTime,remote.guidance.checkinTime)!,commitments:records(b?.commitments??[],local.guidance.commitments,remote.guidance.commitments),feedback:records(b?.feedback??[],local.guidance.feedback,remote.guidance.feedback)};}
   if(guidance===null)throw new AccountConflict();
   const merged:RhythmData={schemaVersion:1,settings,intent:choose(base.intent,local.intent,remote.intent)!,sessions:records(base.sessions,local.sessions,remote.sessions),wakeMarkers:records(base.wakeMarkers,local.wakeMarkers,remote.wakeMarkers),checkins:records(base.checkins,local.checkins,remote.checkins),journal:records(base.journal,local.journal,remote.journal),audit:records(base.audit,local.audit,remote.audit),...(guidance?{guidance}:{}),...(choose(base.profile,local.profile,remote.profile)?{profile:choose(base.profile,local.profile,remote.profile)}:{})};
+  if(base.coaching||local.coaching||remote.coaching){
+    const b=base.coaching??emptyCoaching(),l=local.coaching??emptyCoaching(),r=remote.coaching??emptyCoaching();
+    const forgotten=records(b.forgotten,l.forgotten,r.forgotten),threads=new Set(forgotten.filter(f=>f.kind==='thread').map(f=>f.targetId)),memories=new Set(forgotten.filter(f=>f.kind==='memory').map(f=>f.targetId));
+    const visible=(c:typeof b)=>({...c,messages:c.messages.filter(m=>!threads.has(m.threadId)),memories:c.memories.filter(m=>!memories.has(m.id)&&(!m.sourceMessageId||!c.messages.some(msg=>msg.id===m.sourceMessageId&&threads.has(msg.threadId))))});
+    const bb=visible(b),ll=visible(l),rr=visible(r);
+    let consent:typeof b.consent;try{consent=choose(b.consent,l.consent,r.consent)!;}catch{consent=!l.consent.enabled?l.consent:!r.consent.enabled?r.consent:!l.consent.journal?l.consent:!r.consent.journal?r.consent:[l.consent,r.consent].sort((a,b)=>b.atUtc.localeCompare(a.atUtc))[0]!;}
+    merged.coaching=cleanCoaching({version:1,consent,activePlanId:choose(b.activePlanId,l.activePlanId,r.activePlanId)!,memories:records(bb.memories,ll.memories,rr.memories),messages:records(bb.messages,ll.messages,rr.messages),plans:records(b.plans,l.plans,r.plans),feedback:records(b.feedback,l.feedback,r.feedback),forgotten});
+  }
   assertData(merged);return merged;
+}
+function preserveCoachPrivacy(next:RhythmData,local:RhythmData,remote:RhythmData):RhythmData{
+  if(!local.coaching&&!remote.coaching)return next;
+  const c=next.coaching??emptyCoaching(),l=local.coaching??remote.coaching!,r=remote.coaching;
+  const consent=!l.consent.enabled?l.consent:r&&!r.consent.enabled?r.consent:r&&!r.consent.journal?r.consent:l.consent;
+  const forgotten=[...new Map([...c.forgotten,...l.forgotten,...(r?.forgotten??[])].map(f=>[f.id,f])).values()];
+  return {...next,coaching:cleanCoaching({...c,consent,forgotten})};
 }
 function chooseIfUnchanged<T>(b:T|undefined,l:T|undefined,r:T|undefined):T|undefined|null{try{return choose(b,l,r);}catch{return null;}}
 export function preserveAudio(data:RhythmData,from:RhythmData):RhythmData{return {...data,journal:data.journal.map(note=>{const old=from.journal.find(n=>n.id===note.id);return !note.audio&&note.audioRef&&old?.audio&&old.audioRef?.path===note.audioRef.path?{...note,audio:old.audio}:note;})};}
@@ -81,6 +97,6 @@ export class AccountStore {
   async replaceFromCloud(data?:RhythmData){
     const local=await this.current();if(!local)throw new Error('Account niet geladen.');const remote=await this.remote.read();this.check();if(!remote)throw new Error('Er is nog geen online kopie.');
     const prepared=await this.remote.prepare(local.data);await this.remote.recover(wireData(prepared),crypto.randomUUID());this.check();
-    return this.change(row=>{if(row.seq!==local.seq||!same(wireData(row.data),wireData(local.data)))throw new Error('Er is tijdens het ophalen nieuwe invoer opgeslagen. Deze is behouden. Probeer herstellen opnieuw.');return {...row,data:preserveAudio(data??remote.data,row.data),base:remote.data,revision:remote.revision,head:remote.changeId,syncedAt:remote.updatedAt,pending:null,seq:row.seq+1,confirmedSeq:data?row.confirmedSeq:row.seq+1};});
+    return this.change(row=>{if(row.seq!==local.seq||!same(wireData(row.data),wireData(local.data)))throw new Error('Er is tijdens het ophalen nieuwe invoer opgeslagen. Deze is behouden. Probeer herstellen opnieuw.');const restored=preserveCoachPrivacy(preserveAudio(data??remote.data,row.data),row.data,remote.data);const changed=!!data||!same(wireData(restored),remote.data);return {...row,data:restored,base:remote.data,revision:remote.revision,head:remote.changeId,syncedAt:remote.updatedAt,pending:null,seq:row.seq+1,confirmedSeq:changed?row.confirmedSeq:row.seq+1};});
   }
 }

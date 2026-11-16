@@ -16,6 +16,8 @@ Dit is een prototype. Een geslaagde scan of test geeft geen garantie van 100% ve
 
 ## Verifiëren
 
+Vanaf 0.8.0 controleert de optionele GPT-serverroute Auth, actieve sessie, eigen account-RLS, toestemming, bronvingerafdruk en private quota. Het serversecret blijft buiten de client. Antwoorden hebben een strikt schema en vereisen gebruikersbevestiging voor een plan. Bron-/inhoudsvalidatie garandeert geen semantische waarheid. Verwijdermarkeringen voorkomen herstel van vergeten context en toestemming; oude backups en providerretentie zijn afzonderlijk. Details en tests: [COACH.md](COACH.md).
+
 ```powershell
 npm.cmd run security:deps
 npm.cmd test

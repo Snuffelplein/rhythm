@@ -1,6 +1,6 @@
 {
   "name": "rhythm",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -33,7 +33,10 @@
     "test:push:hosted": "node tests/push-hosted.mjs",
     "security:deps": "npm audit --audit-level=low",
     "test:account": "node tests/account-database.mjs && node tests/cloud-browser.mjs && node tests/account-data-browser.mjs",
-    "test:whisper:nl": "node tests/whisper-nl-browser.mjs"
+    "test:whisper:nl": "node tests/whisper-nl-browser.mjs",
+    "build:coach": "node scripts/build-coach-edge.mjs",
+    "test:coach": "node scripts/build-coach-edge.mjs && node tests/coach-database.mjs && node tests/coaching-browser.mjs",
+    "test:gemma4": "node tests/gemma4-browser.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",

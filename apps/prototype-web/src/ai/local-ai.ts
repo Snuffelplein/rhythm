@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import type { WebWorkerMLCEngine } from '@mlc-ai/web-llm';
 
-export const GEMMA_MODEL = 'gemma3-1b-it-q4f16_1-MLC';
+export const GEMMA_MODEL = 'gemma-4-E2B-it-q4f16_1-MLC';
+export const GEMMA_F32_MODEL = 'gemma-4-E2B-it-q4f32_1-MLC';
 type ModelName = 'whisper' | 'gemma';
 interface ModelStatus { state: 'unloaded' | 'loading' | 'ready' | 'error'; progress: number; message: string }
 const unloaded = (): ModelStatus => ({ state: 'unloaded', progress: 0, message: 'Nog niet geladen' });
@@ -46,13 +47,16 @@ export async function loadGemma(): Promise<void> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   update('gemma', { state: 'loading', progress: 0, message: 'Beschikbaarheid van WebGPU controleren…' });
   try {
-    if (!navigator.gpu || !await navigator.gpu.requestAdapter()) throw new Error('Gemma heeft WebGPU nodig. Probeer een recente Edge- of Chrome-browser met hardwareversnelling.');
+    const adapter=navigator.gpu?await navigator.gpu.requestAdapter():null;
+    if (!adapter) throw new Error('Gemma heeft WebGPU nodig. Probeer een recente Edge- of Chrome-browser met hardwareversnelling.');
+    if(adapter.limits.maxStorageBufferBindingSize<201326592||adapter.limits.maxBufferSize<201326592)throw new Error('Gemma heeft grotere GPU-buffers nodig dan deze browser biedt. Typen en online begeleiding blijven beschikbaar.');
+    const model=adapter.features.has('shader-f16')?GEMMA_MODEL:GEMMA_F32_MODEL;
     const { CreateWebWorkerMLCEngine } = await import('@mlc-ai/web-llm');
     if (token !== generation) return;
     gemmaWorker = new Worker(new URL('./gemma.worker.ts', import.meta.url), { type: 'module' });
-    const initialization = CreateWebWorkerMLCEngine(gemmaWorker, GEMMA_MODEL, {
+    const initialization = CreateWebWorkerMLCEngine(gemmaWorker, model, {
       logLevel: 'SILENT', initProgressCallback: report => { if (token === generation) update('gemma', { progress: report.progress, message: 'Gemma downloaden en laden…' }); },
-    }, { context_window_size: 2048 });
+    }, { context_window_size: 4096 });
     const interruption = new Promise<WebWorkerMLCEngine>((_, reject) => {
       cancelGemmaLoad = () => reject(new Error('Laden gestopt.'));
       timeout = setTimeout(() => reject(new Error('Laden duurde te lang.')), 300000);
@@ -60,9 +64,10 @@ export async function loadGemma(): Promise<void> {
     });
     const engine = await Promise.race([initialization, interruption]);
     if (token !== generation) { await engine.unload(); return; }
-    gemma = engine; update('gemma', { state: 'ready', progress: 1, message: 'Gemma is klaar op dit apparaat' });
+    gemma = engine; update('gemma', { state: 'ready', progress: 1, message: 'Gemma is klaar op dit apparaat · Gemma 4 E2B' });
   } catch (error) {
     if (token === generation) {
+      console.warn('Rhythm: lokaal model laden gestopt.',error instanceof Error?`${error.name}: ${error.message}`:'Onbekende laadfout');
       gemmaWorker?.terminate(); gemmaWorker = null;
       update('gemma', { state: 'error', message: error instanceof Error && error.message.startsWith('Gemma heeft') ? error.message : 'Gemma kon niet laden. Controleer verbinding, vrije opslag en GPU-ondersteuning. Je kunt gewoon blijven typen.' });
     }
@@ -108,5 +113,5 @@ export async function removeModelDownloads(): Promise<void> {
   releaseModels();
   await caches.delete('rhythm-whisper-model-v1');
   const { deleteModelAllInfoInCache } = await import('@mlc-ai/web-llm');
-  await deleteModelAllInfoInCache(GEMMA_MODEL);
+  await Promise.all([GEMMA_MODEL,GEMMA_F32_MODEL,'gemma3-1b-it-q4f16_1-MLC'].map(model=>deleteModelAllInfoInCache(model)));
 }

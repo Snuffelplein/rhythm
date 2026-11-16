@@ -2,6 +2,8 @@
 
 ## Configuratie 0.7.0
 
+Versie 0.8.0 voegt de optionele servercoach en persoonlijke plannen toe. Zie [COACH.md](COACH.md) voor de aanvullende migratie, serversecret, bundel/deployment, toestemming, kostenlimieten en checks. Onderstaande account-/hostingconfiguratie blijft van toepassing.
+
 - React/Vite PWA, Node.js 24, npm workspaces. Vercel bouwt vanaf de repositoryroot met `npm ci`, de dependency-gate en `npm run build`; output `apps/prototype-web/dist`.
 - Vast adres: [Rhythm](https://rhythm-rho-bice.vercel.app/). De GitHub-integratie publiceert `main`; controleer de broncommit en geleverde versie na iedere push.
 - Supabase Auth met e-mail/wachtwoord, e-mailbevestiging en PKCE. Eén centrale login; geen apart kluiswachtwoord voor nieuw gebruik.
